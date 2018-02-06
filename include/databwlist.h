@@ -11,7 +11,7 @@
 
 // ROM data exclude list.
 // 1 = start of data address, 2 = end of data address, 3 = data size
-u32 dataBlacklist_V2GE0[7] = {0x00249C00, 0x01094400, 0x00FEB200, 0x00000000,	// Mario vs Donkey Kong: Mini-Land Mayhem (U)
+u32 dataBlacklist_V2GE0[7] = {0x00249C00, 0x01234E00, 0x00FEB200, 0x00000000,	// Mario vs Donkey Kong: Mini-Land Mayhem (U)
 								0x0DE00000, 0x00000010, 0x00020000};
 
 #endif // _DATABWLIST_H
