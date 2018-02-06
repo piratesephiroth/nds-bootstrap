@@ -26,6 +26,12 @@ extern u32 ROM_HEADERCRC;
 extern u32 ARM9_LEN;
 extern u32 romSize;
 
+extern u32 setDataBWlist[7];
+extern u32 setDataBWlist_1[3];
+extern u32 setDataBWlist_2[3];
+extern u32 setDataBWlist_3[3];
+extern u32 setDataBWlist_4[3];
+
 extern unsigned long cheat_engine_size;
 extern unsigned long intr_orig_return_offset;
 
@@ -336,4 +342,7 @@ void hookNdsRetail_ROMinRAM (u32* cardEngineLocation9, u32 ROMinRAM) {
 	cardEngineLocation9[9] = ROM_HEADERCRC;
 	cardEngineLocation9[10] = ARM9_LEN;
 	cardEngineLocation9[11] = romSize;
+	for(int i = 0; i < 7; i++) {
+		cardEngineLocation9[12+i] = setDataBWlist[i];
+	}
 }

@@ -19,6 +19,11 @@
 .global ROM_HEADERCRC
 .global ARM9_LEN
 .global romSize
+.global setDataBWlist
+.global setDataBWlist_1
+.global setDataBWlist_2
+.global setDataBWlist_3
+.global setDataBWlist_4
 
 #define ICACHE_SIZE	0x2000
 #define DCACHE_SIZE	0x1000
@@ -48,6 +53,30 @@ ROM_HEADERCRC:
 ARM9_LEN:
 	.word	0x00000000
 romSize:
+	.word	0x00000000
+setDataBWlist:
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+setDataBWlist_1:
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+setDataBWlist_2:
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+setDataBWlist_3:
+	.word	0x00000000
+	.word	0x00000000
+	.word	0x00000000
+setDataBWlist_4:
+	.word	0x00000000
+	.word	0x00000000
 	.word	0x00000000
 	
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

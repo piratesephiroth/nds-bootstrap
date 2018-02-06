@@ -87,9 +87,11 @@ extern unsigned long patchMpuRegion;
 extern unsigned long patchMpuSize;
 extern unsigned long loadingScreen;
 
-u32 setDataBWlist[4] = {0x00000000, 0x00000000, 0x00000000, 0x00000000};
+u32 setDataBWlist[7] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 u32 setDataBWlist_1[3] = {0x00000000, 0x00000000, 0x00000000};
 u32 setDataBWlist_2[3] = {0x00000000, 0x00000000, 0x00000000};
+u32 setDataBWlist_3[3] = {0x00000000, 0x00000000, 0x00000000};
+u32 setDataBWlist_4[3] = {0x00000000, 0x00000000, 0x00000000};
 int dataAmount = 0;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -305,17 +307,15 @@ void loadRomIntoRam(aFile file) {
 		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 	} else {
 		/* if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
-			for(int i = 0; i < 3; i++)
+			for(int i = 0; i < 7; i++)
 				setDataBWlist[i] = dataWhitelist_BXSE0[i];
-			setDataBWlist[3] = true;
-		} else if((ROM_TID == 0x45495941) && (ROM_HEADERCRC == 0x3ACCCF56)) {	// Yoshi Touch & Go (U)
-			for(int i = 0; i < 3; i++)
-				setDataBWlist[i] = dataBlacklist_AYIE0[i];
-		} else if((ROM_TID == 0x45525741) && (ROM_HEADERCRC == 0xB586CF56)) {	// Advance Wars: Dual Strike (U)
-			for(int i = 0; i < 3; i++)
-				setDataBWlist[i] = dataBlacklist_AWRE0[i];
-			ROM_LOCATION = 0x0C400000;
-		} */
+		} else if((ROM_TID == 0x54595056) && (ROM_HEADERCRC == 0xC0C0CF56)) {		// Pokemon Conquest (U)
+			for(int i = 0; i < 7; i++)
+				setDataBWlist[i] = dataWhitelist_VPYT0[i];
+		} else */ if((ROM_TID == 0x45473256) && (ROM_HEADERCRC == 0xCC32CF56)) {		// Mario vs Donkey Kong: Mini-Land Mayhem (U)
+			for(int i = 0; i < 7; i++)
+				setDataBWlist[i] = dataBlacklist_V2GE0[i];
+		}
 		if(setDataBWlist[0] == 0 && setDataBWlist[1] == 0 && setDataBWlist[2] == 0){
 		} else {
 			ROMinRAM = 2;
@@ -349,6 +349,16 @@ void loadRomIntoRam(aFile file) {
 	}
 
 	hookNdsRetail_ROMinRAM((u32*)ENGINE_LOCATION_ARM9, ROMinRAM);
+	
+	/* if((ROM_TID & 0x00FFFFFF) == 0x595056) {
+		// Check overlays for card reads for Pokemon Conquest
+		//u32 arm9overlayLocations[15] =
+		//{ 0x00072A00, 0x00076800, 0x000A2400, 0x000E3C00, 0x000FFC00, 
+		//0x000FFE00, 0x00117C00, 0x0011EC00, 0x0011EE00, 0x00120600, 
+		//0x00122400, 0x00129600, 0x0012AC00, 0x00141800, 0x0014FC00 }
+		module_params_t* params = findModuleParams(NDS_HEAD, donorSdkVer);
+		patchCardNdsArm9Overlay(ROM_LOCATION,setDataBWlist[2],ENGINE_LOCATION_ARM9,params, patchMpuRegion, patchMpuSize);
+	} */
 }
 
 /*-------------------------------------------------------------------------

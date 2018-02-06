@@ -20,8 +20,6 @@
 #include <nds/fifomessages.h>
 #include "cardEngine.h"
 
-#include "databwlist.h"
-
 static u32 ROM_LOCATION = 0x0D000000;
 extern u32 ROM_TID;
 extern u32 ROM_HEADERCRC;
@@ -73,18 +71,12 @@ extern u32 ROMinRAM;
 static int use16MB = 0;
 static bool dsiWramUsed = false;
 
-static u32 GAME_CACHE_ADRESS_START = 0x0D000000;
-static u32 GAME_CACHE_SLOTS = 0;
-static u32 GAME_READ_SIZE = _256KB_READ_SIZE;
-
-u32 setDataBWlist[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_1[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_2[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_3[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_4[3] = {0x00000000, 0x00000000, 0x00000000};
+extern u32 setDataBWlist[7];
+extern u32 setDataBWlist_1[3];
+extern u32 setDataBWlist_2[3];
+extern u32 setDataBWlist_3[3];
+extern u32 setDataBWlist_4[3];
 int dataAmount = 0;
-
-static bool whitelist = false;
 
 void user_exception(void);
 
@@ -125,7 +117,7 @@ int allocateCacheSlot() {
 int GAME_allocateCacheSlot() {
 	int slot = 0;
 	int lowerCounter = only_accessCounter;
-	for(int i=0; i<GAME_CACHE_SLOTS; i++) {
+	for(int i=0; i<setDataBWlist[5]; i++) {
 		if(only_cacheCounter[i]<=lowerCounter) {
 			lowerCounter = only_cacheCounter[i];
 			slot = i;
@@ -154,7 +146,7 @@ int getSlotForSector(u32 sector) {
 }
 
 int GAME_getSlotForSector(u32 sector) {
-	for(int i=0; i<GAME_CACHE_SLOTS; i++) {
+	for(int i=0; i<setDataBWlist[5]; i++) {
 		if(only_cacheDescriptor[i]==sector) {
 			return i;
 		}
@@ -172,7 +164,7 @@ vu8* getCacheAddress(int slot) {
 }
 
 vu8* GAME_getCacheAddress(int slot) {
-	return (vu32*)(GAME_CACHE_ADRESS_START+slot*GAME_READ_SIZE);
+	return (vu32*)(setDataBWlist[4]+slot*setDataBWlist[6]);
 }
 
 void transfertToArm7(int slot) {
@@ -221,45 +213,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 	if(!flagsSet) {
 		// If ROM size is 0x01000000 or below, then the ROM is in RAM.
-		if((romSize > 0) && (romSize <= 0x01000000)) {
+		if((romSize > 0) && (romSize <= 0x01000000) || setDataBWlist[3]==false) {
 			ROM_LOCATION -= 0x4000;
 			ROM_LOCATION -= ARM9_LEN;
-		} else {
-			//dsiWramUsed = true;
-
-			/* if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
-				for(int i = 0; i < 3; i++)
-					setDataBWlist[i] = dataWhitelist_BXSE0[i];
-
-				GAME_CACHE_ADRESS_START = 0x0DC40000;
-				GAME_CACHE_SLOTS = 0x1E;
-				GAME_READ_SIZE = _128KB_READ_SIZE;
-
-				whitelist = true;
-			} else if((ROM_TID == 0x45495941) && (ROM_HEADERCRC == 0x3ACCCF56)) {	// Yoshi Touch & Go (U)
-				for(int i = 0; i < 3; i++)
-					setDataBWlist[i] = dataBlacklist_AYIE0[i];
-
-				ROM_LOCATION -= 0x4000;
-				ROM_LOCATION -= ARM9_LEN;
-
-				GAME_CACHE_ADRESS_START = 0x0CCE0000;
-				GAME_CACHE_SLOTS = 0x19;
-				GAME_READ_SIZE = _128KB_READ_SIZE;
-			} else if((ROM_TID == 0x45525741) && (ROM_HEADERCRC == 0xB586CF56)) {	// Advance Wars: Dual Strike (U)
-				for(int i = 0; i < 3; i++)
-					setDataBWlist[i] = dataBlacklist_AWRE0[i];
-
-				ROM_LOCATION = 0x0C400000;
-				ROM_LOCATION -= 0x4000;
-				ROM_LOCATION -= ARM9_LEN;
-
-				GAME_CACHE_ADRESS_START = 0x0CBC0000;
-				GAME_CACHE_SLOTS = 0x11;
-				GAME_READ_SIZE = _256KB_READ_SIZE;
-
-				use16MB = 1;
-			} */
 		}
 		flagsSet = true;
 	}
@@ -518,7 +474,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 					}
 				}
 
-				if(whitelist && src >= setDataBWlist[0] && src < setDataBWlist[1]) {
+				if(setDataBWlist[3]==true && src >= setDataBWlist[0] && src < setDataBWlist[1]) {
 					// if(src >= setDataBWlist[0] && src < setDataBWlist[1]) {
 						u32 src2=src;
 						src2 -= setDataBWlist[0];
@@ -738,7 +694,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							page = (src/512)*512;
 						}
 					} */
-				} else if(!whitelist && src > 0 && src < setDataBWlist[0]) {
+				} else if(setDataBWlist[3]==false && src > 0 && src < setDataBWlist[0]) {
 					u32 len2=len;
 					if(len2 > 512) {
 						len2 -= src%4;
@@ -803,7 +759,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						dst = cardStruct[1];
 						page = (src/512)*512;
 					}
-				} else if(!whitelist && src >= setDataBWlist[1] && src < romSize) {
+				} else if(setDataBWlist[3]==false && src >= setDataBWlist[1] && src < romSize) {
 					u32 len2=len;
 					if(len2 > 512) {
 						len2 -= src%4;
@@ -868,7 +824,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						dst = cardStruct[1];
 						page = (src/512)*512;
 					}
-				} else if(page == src && len > GAME_READ_SIZE && dst < 0x02700000 && dst > 0x02000000 && ((u32)dst)%4==0) {
+				} else if(page == src && len > setDataBWlist[6] && dst < 0x02700000 && dst > 0x02000000 && ((u32)dst)%4==0) {
 					if(dsiWramUsed) WRAM_accessCounter++;
 					else only_accessCounter++;
 
@@ -889,7 +845,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 					if(dsiWramUsed) WRAM_accessCounter++;
 					else only_accessCounter++;
 
-					u32 sector = (src/GAME_READ_SIZE)*GAME_READ_SIZE;
+					u32 sector = (src/setDataBWlist[6])*setDataBWlist[6];
 
 					int slot = 0;
 					vu8* buffer = 0;
@@ -917,14 +873,14 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 						if(!dsiWramUsed) REG_SCFG_EXT = 0x8300C000;
 
-						if(needFlushDCCache) DC_FlushRange(buffer, GAME_READ_SIZE);
+						if(needFlushDCCache) DC_FlushRange(buffer, setDataBWlist[6]);
 
 						// transfer the WRAM-B cache to the arm7
 						if(dsiWramUsed) transfertToArm7(slot);				
 
 						// write the command
 						sharedAddr[0] = buffer;
-						sharedAddr[1] = GAME_READ_SIZE;
+						sharedAddr[1] = setDataBWlist[6];
 						sharedAddr[2] = sector;
 						sharedAddr[3] = commandRead;
 
@@ -945,8 +901,8 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 					}
 
 					u32 len2=len;
-					if((src - sector) + len2 > GAME_READ_SIZE){
-						len2 = sector - src + GAME_READ_SIZE;
+					if((src - sector) + len2 > setDataBWlist[6]){
+						len2 = sector - src + setDataBWlist[6];
 					}
 
 					if(len2 > 512) {
@@ -1011,7 +967,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						src = cardStruct[0];
 						dst = cardStruct[1];
 						page = (src/512)*512;
-						sector = (src/GAME_READ_SIZE)*GAME_READ_SIZE;
+						sector = (src/setDataBWlist[6])*setDataBWlist[6];
 						if(!dsiWramUsed) WRAM_accessCounter++;
 						else only_accessCounter++;
 					}

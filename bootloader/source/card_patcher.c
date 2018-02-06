@@ -371,31 +371,247 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	debug[6] = *card_struct;
 	//debug[7] = *cache_struct;
 
-	cardEngineLocation[5] = ((u32*)*card_struct)+6;
-	if(moduleParams->sdk_version > 0x3000000) {
-		cardEngineLocation[5] = ((u32*)*card_struct)+7;
-	}
+	cardEngineLocation[5] = ((u32*)*card_struct)+7;
 	//cardEngineLocation[6] = *cache_struct;
 
 	// cache management alternative
-	*((u32*)patches[5]) = ((u32*)*card_struct)+6;
-	if(moduleParams->sdk_version > 0x3000000) {
-		*((u32*)patches[5]) = ((u32*)*card_struct)+7;
-	}
+	*((u32*)patches[5]) = ((u32*)*card_struct)+7;
 
 	*((u32*)patches[7]) = cardPullOutOffset+4;
-	if(cardReadCachedOffset==0x020777F0){
-		*((u32*)patches[8]) = cardReadCachedOffset-0x87E0; //NSMBDS (U) fix.
-	/* }else if (cardReadCachedOffset==0x02076DAC){
-		*((u32*)patches[8]) = cardReadCachedOffset-0x7D9C; //NSMBDS (J) fix.
-	}else if (cardReadCachedOffset==0x02067758){
-		*((u32*)patches[8]) = cardReadCachedOffset-0x8748; //NSMBDS (E) fix. */
-	}else if(cardReadCachedOffset==0x021240E8){
-		*((u32*)patches[8]) = 0x0211E1A8; //ACWW fix.
-		cardIdStartOffset = 0x02123FF0; //ACWW fix part2.
-	}else{
-		*((u32*)patches[8]) = cardReadCachedOffset;
+	*((u32*)patches[8]) = cardReadCachedOffset;
+	patches[10] = needFlushCache;
+
+	//copyLoop (oldArenaLow, cardReadPatch, 0xF0);
+
+	copyLoop ((u32*)cardReadStartOffset, cardReadPatch, 0xF0);
+
+	copyLoop ((u32*)(cardPullOutOffset), cardPullOutPatch, 0x5C);
+
+	if (cardIdStartOffset) {
+		copyLoop ((u32*)cardIdStartOffset, cardIdPatch, 0x8);
 	}
+
+	if (cardReadDmaOffset) {
+		dbg_printf("Card read dma :\t");
+		dbg_hexa(cardReadDmaOffset);
+		dbg_printf("\n");
+
+		copyLoop ((u32*)cardReadDmaOffset, cardDmaPatch, 0x8);
+	}
+
+	dbg_printf("ERR_NONE");
+	return 0;
+}
+
+u32 patchCardNdsArm9Overlay (u32* overlayLocation, u32 overlayLocationSize, u32* cardEngineLocation, module_params_t* moduleParams, u32 patchMpuRegion, u32 patchMpuSize) {
+
+	u32* debug = (u32*)0x03786000;
+	debug[4] = overlayLocation;
+	debug[8] = moduleParams->sdk_version;
+
+	u32* a9cardReadSignature = a9cardReadSignature5;
+	u32* cardReadStartSignature = cardReadStartSignature5;
+	u32* cardPullOutSignature = cardPullOutSignature5;
+	u32* cardReadCachedStartSignature = cardReadCachedStartSignature4;
+	u32* cardReadCachedEndSignature = cardReadCachedEndSignature4;
+
+	u32 needFlushCache = 0;
+
+	// Find the card read
+    u32 cardReadEndOffset =  
+        getOffset((u32*)overlayLocation, 0x00300000,//ndsHeader->arm9binarySize,
+              (u32*)a9cardReadSignature, 2, 1);
+    if (!cardReadEndOffset) {
+        dbg_printf("Card read end not found\n");
+        return 0;
+    }
+	debug[1] = cardReadEndOffset;
+    u32 cardReadStartOffset =   
+        getOffset((u32*)cardReadEndOffset, -0x120,
+              (u32*)cardReadStartSignature, 1, -1);
+    if (!cardReadStartOffset) {
+        dbg_printf("Card read start not found\n");
+        return 0;
+    }
+	dbg_printf("Arm9 Card read:\t");
+	dbg_hexa(cardReadStartOffset);
+	dbg_printf("\n");
+
+	u32 cardPullOutOffset =   
+        getOffset((u32*)overlayLocation, 0x00300000,//, ndsHeader->arm9binarySize,
+              (u32*)cardPullOutSignature, 4, 1);
+    if (!cardPullOutOffset) {
+        dbg_printf("Card pull out handler not found\n");
+        //return 0;
+    } else {
+		dbg_printf("Card pull out handler:\t");
+		dbg_hexa(cardPullOutOffset);
+		dbg_printf("\n");
+	}
+
+
+    u32 cardReadCachedEndOffset =  
+        getOffset((u32*)overlayLocation, 0x00300000,//ndsHeader->arm9binarySize,
+              (u32*)cardReadCachedEndSignature, 4, 1);
+    if (!cardReadCachedEndOffset) {
+        dbg_printf("Card read cached end not found\n");
+        //return 0;
+    }
+    u32 cardReadCachedOffset =   
+        getOffset((u32*)cardReadCachedEndOffset, -0xFF,
+              (u32*)cardReadCachedStartSignature, 2, -1);
+    if (!cardReadStartOffset) {
+        dbg_printf("Card read cached start not found\n");
+        //return 0;
+    }
+	dbg_printf("Card read cached :\t");
+	dbg_hexa(cardReadCachedOffset);
+	dbg_printf("\n");
+
+	u32 cardReadDmaOffset = 0;
+	u32 cardReadDmaEndOffset =  
+        getOffset((u32*)overlayLocation, 0x00300000,//ndsHeader->arm9binarySize,
+              (u32*)cardReadDmaEndSignature, 2, 1);
+    if (!cardReadDmaEndOffset) {
+        dbg_printf("Card read dma end not found\n");
+    } else {
+		dbg_printf("Card read dma end :\t");
+		dbg_hexa(cardReadDmaEndOffset);
+		dbg_printf("\n");
+		cardReadDmaOffset =   
+			getOffset((u32*)cardReadDmaEndOffset, -0x200,
+				  (u32*)cardReadDmaStartSignature, 1, -1);
+		if (!cardReadDmaOffset) {
+			dbg_printf("Card read dma start not found\n");
+			cardReadDmaOffset =   
+				getOffset((u32*)cardReadDmaEndOffset, -0x200,
+					  (u32*)cardReadDmaStartSignatureAlt, 1, -1);
+			if (!cardReadDmaOffset) {
+				dbg_printf("Card read dma start alt not found\n");
+			}
+		}
+		if (!cardReadDmaOffset) {
+			//dbg_printf("Card read dma start not found\n");
+			cardReadDmaOffset =   
+				getOffset((u32*)cardReadDmaEndOffset, -0x200,
+					  (u32*)cardReadDmaStartSignatureAlt2, 1, -1);
+			if (!cardReadDmaOffset) {
+				dbg_printf("Card read dma start alt2 not found\n");
+			}
+		}
+	}    
+
+	// Find the card id
+	u32 cardIdStartOffset = 0;
+    u32 cardIdEndOffset =  
+        getOffset((u32*)cardReadEndOffset+0x10, overlayLocationSize,
+              (u32*)a9cardIdSignature, 2, 1);
+			  
+	if(!cardIdEndOffset){
+		cardIdEndOffset =  
+        getOffset((u32*)overlayLocation, overlayLocationSize,
+              (u32*)a9cardIdSignature, 2, 1);
+	}
+    if (!cardIdEndOffset) {
+        dbg_printf("Card id end not found\n");
+    } else {
+		debug[1] = cardIdEndOffset;
+		cardIdStartOffset =   
+			getOffset((u32*)cardIdEndOffset, -0x100,
+				  (u32*)cardIdStartSignature, 2, -1);
+		if (!cardIdStartOffset) {
+		cardIdStartOffset =   
+			getOffset((u32*)cardIdEndOffset, -0x100,
+				  (u32*)cardIdStartSignatureAlt, 1, -1);
+		}
+		if (!cardIdStartOffset) {
+		cardIdStartOffset =   
+			getOffset((u32*)cardIdEndOffset, -0x100,
+				  (u32*)cardIdStartSignatureAlt2, 1, -1);
+		}
+		if (!cardIdStartOffset) {
+		cardIdStartOffset =   
+			getOffset((u32*)cardIdEndOffset, -0x100,
+				  (u32*)cardIdStartSignatureThumb, 1, -1);
+		}
+		if (!cardIdStartOffset) {
+		cardIdStartOffset =   
+			getOffset((u32*)cardIdEndOffset, -0x100,
+				  (u32*)cardIdStartSignatureThumbAlt, 1, -1);
+		}
+		if (!cardIdStartOffset) {
+		cardIdStartOffset =   
+			getOffset((u32*)cardIdEndOffset, -0x100,
+				  (u32*)cardIdStartSignatureThumbAlt2, 1, -1);
+		}
+		if (!cardIdStartOffset) {
+		cardIdStartOffset =   
+			getOffset((u32*)cardIdEndOffset, -0x100,
+				  (u32*)cardIdStartSignatureThumbAlt3, 1, -1);
+		}
+		if (!cardIdStartOffset) {
+			dbg_printf("Card id start not found\n");
+		} else {
+			dbg_printf("Card id :\t");
+			dbg_hexa(cardIdStartOffset);
+			dbg_printf("\n");
+		}
+	}
+
+		u32 randomPatchOffset =  
+				getOffset((u32*)overlayLocation, 0x00300000,//ndsHeader->arm9binarySize,
+					  (u32*)aRandomPatch, 4, 1);
+			if(randomPatchOffset){
+				*(u32*)(randomPatchOffset) = 0xE3A00000;
+				*(u32*)(randomPatchOffset+4) = 0xE12FFF1E;
+			}
+				if (!randomPatchOffset) {
+					//dbg_printf("Random patch not found\n"); Don't bother logging it.
+				}
+
+		u32 randomPatch2Offset =
+                                getOffset((u32*)overlayLocation, 0x00300000,//ndsHeader->arm9binarySize,
+                                          (u32*)aRandomPatch2, 3, 1);
+                        if(randomPatch2Offset){
+                                *(u32*)(randomPatch2Offset) = 0xE3A00000;
+                                *(u32*)(randomPatch2Offset+4) = 0xE12FFF1E;
+                        }
+                                if (!randomPatchOffset) {
+                                        //dbg_printf("Random patch not found\n"); Don't bother logging it.
+                                }
+
+
+
+
+	debug[2] = cardEngineLocation;
+
+	u32* patches =  (u32*) cardEngineLocation[0];
+
+	//cardEngineLocation[3] = moduleParams->sdk_version;
+
+	u32* cardReadPatch = (u32*) patches[0];
+
+	u32* cardPullOutPatch = patches[6];
+
+	u32* cardIdPatch = patches[3];
+
+	u32* cardDmaPatch = patches[4];
+
+	debug[5] = patches;
+
+	u32* card_struct = ((u32*)cardReadEndOffset) - 1;
+	//u32* cache_struct = ((u32*)cardIdStartOffset) - 1;
+
+	debug[6] = *card_struct;
+	//debug[7] = *cache_struct;
+
+	//cardEngineLocation[5] = ((u32*)*card_struct)+7;
+
+	// cache management alternative
+	*((u32*)patches[5]) = ((u32*)*card_struct)+7;
+
+	*((u32*)patches[7]) = cardPullOutOffset+4;
+	*((u32*)patches[8]) = cardReadCachedOffset;
 	patches[10] = needFlushCache;
 
 	//copyLoop (oldArenaLow, cardReadPatch, 0xF0);
