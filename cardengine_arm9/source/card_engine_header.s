@@ -19,6 +19,7 @@
 .global ROM_HEADERCRC
 .global ARM9_LEN
 .global romSize
+.global setDataMobicliplist
 .global setDataBWlist
 .global setDataBWlist_1
 .global setDataBWlist_2
@@ -53,6 +54,10 @@ ROM_HEADERCRC:
 ARM9_LEN:
 	.word	0x00000000
 romSize:
+	.word	0x00000000
+setDataMobicliplist:
+	.word	0x00000000
+	.word	0x00000000
 	.word	0x00000000
 setDataBWlist:
 	.word	0x00000000

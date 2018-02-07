@@ -52,6 +52,7 @@ Helpful information:
 #include "hook.h"
 #include "common.h"
 
+#include "datamobicliplist.h"
 #include "databwlist.h"
 
 void arm7clearRAM();
@@ -87,6 +88,7 @@ extern unsigned long patchMpuRegion;
 extern unsigned long patchMpuSize;
 extern unsigned long loadingScreen;
 
+u32 setDataMobicliplist[3] = {0x00000000, 0x00000000, 0x00000000};
 u32 setDataBWlist[7] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 u32 setDataBWlist_1[3] = {0x00000000, 0x00000000, 0x00000000};
 u32 setDataBWlist_2[3] = {0x00000000, 0x00000000, 0x00000000};
@@ -315,23 +317,22 @@ void loadRomIntoRam(aFile file) {
 		arm9_extRAM = false;
 		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 	} else {
-		/* if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
-			for(int i = 0; i < 7; i++)
-				setDataBWlist[i] = dataWhitelist_BXSE0[i];
+		if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
+			for(int i = 0; i < 3; i++)
+				setDataMobicliplist[i] = dataMobicliplist_BXSE0[i];
 		} else if((ROM_TID == 0x50454559) && (ROM_HEADERCRC == 0x7575CF56)) {		// Inazuma Eleven (E)
-			for(int i = 0; i < 7; i++)
-				setDataBWlist[i] = dataWhitelist_YEEP0[i];
-		} else if((ROM_TID == 0x54595056) && (ROM_HEADERCRC == 0xC0C0CF56)) {		// Pokemon Conquest (U)
+			for(int i = 0; i < 3; i++)
+				setDataMobicliplist[i] = dataMobicliplist_YEEP0[i];
+		} else /* if((ROM_TID == 0x54595056) && (ROM_HEADERCRC == 0xC0C0CF56)) {		// Pokemon Conquest (U)
 			for(int i = 0; i < 7; i++)
 				setDataBWlist[i] = dataWhitelist_VPYT0[i];
 		} else */ if((ROM_TID == 0x45473256) && (ROM_HEADERCRC == 0xCC32CF56)) {		// Mario vs Donkey Kong: Mini-Land Mayhem (U)
 			for(int i = 0; i < 7; i++)
 				setDataBWlist[i] = dataBlacklist_V2GE0[i];
 		}
-		if(setDataBWlist[0] == 0 && setDataBWlist[1] == 0 && setDataBWlist[2] == 0){
-		} else {
+		if(setDataBWlist[0] != 0 && setDataBWlist[1] != 0 && setDataBWlist[2] != 0){
 			ROMinRAM = 2;
-			if(setDataBWlist[3] == true) {
+			if(setDataBWlist[3] == 1) {
 				arm9_extRAM = true;
 				while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 				fileRead(ROM_LOCATION, file, setDataBWlist[0], setDataBWlist[2]);
@@ -343,7 +344,7 @@ void loadRomIntoRam(aFile file) {
 				}
 				arm9_extRAM = false;
 				while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
-			} else {
+			} else if(setDataBWlist[3] == 0) {
 				setDataBWlist[0] -= 0x4000;
 				setDataBWlist[0] -= ARM9_LEN;
 				arm9_extRAM = true;

@@ -26,6 +26,7 @@ extern u32 ROM_HEADERCRC;
 extern u32 ARM9_LEN;
 extern u32 romSize;
 
+extern u32 setDataMobicliplist[3];
 extern u32 setDataBWlist[7];
 extern u32 setDataBWlist_1[3];
 extern u32 setDataBWlist_2[3];
@@ -342,7 +343,22 @@ void hookNdsRetail_ROMinRAM (u32* cardEngineLocation9, u32 ROMinRAM) {
 	cardEngineLocation9[9] = ROM_HEADERCRC;
 	cardEngineLocation9[10] = ARM9_LEN;
 	cardEngineLocation9[11] = romSize;
+	for(int i = 0; i < 3; i++) {
+		cardEngineLocation9[12+i] = setDataMobicliplist[i];
+	}
 	for(int i = 0; i < 7; i++) {
-		cardEngineLocation9[12+i] = setDataBWlist[i];
+		cardEngineLocation9[15+i] = setDataBWlist[i];
+	}
+	for(int i = 0; i < 3; i++) {
+		cardEngineLocation9[22+i] = setDataBWlist_1[i];
+	}
+	for(int i = 0; i < 3; i++) {
+		cardEngineLocation9[25+i] = setDataBWlist_2[i];
+	}
+	for(int i = 0; i < 3; i++) {
+		cardEngineLocation9[28+i] = setDataBWlist_3[i];
+	}
+	for(int i = 0; i < 3; i++) {
+		cardEngineLocation9[31+i] = setDataBWlist_4[i];
 	}
 }
