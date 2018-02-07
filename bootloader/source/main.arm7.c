@@ -263,6 +263,15 @@ void loadBinary_ARM7 (aFile file)
 	char* ARM7_DST = (char*)ndsHeader[0x038>>2];
 	u32 ARM7_LEN = ndsHeader[0x03C>>2];
 
+	u32 FAT_SRC = ndsHeader[0x048>>2];
+	u32 FAT_LEN = ndsHeader[0x04C>>2];
+	if(FAT_LEN > 0x8000) FAT_LEN = 0x8000;
+	
+	u32 fat[0x8000>>2];
+	// Load File Allocation Table into memory
+	fileRead((char*)fat, file, FAT_SRC, FAT_LEN);
+	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);
+
 	ROM_TID = ndsHeader[0x00C>>2];
 	romSize = ndsHeader[0x080>>2];
 	ROM_HEADERCRC = ndsHeader[0x15C>>2];
@@ -309,6 +318,9 @@ void loadRomIntoRam(aFile file) {
 		/* if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
 			for(int i = 0; i < 7; i++)
 				setDataBWlist[i] = dataWhitelist_BXSE0[i];
+		} else if((ROM_TID == 0x50454559) && (ROM_HEADERCRC == 0x7575CF56)) {		// Inazuma Eleven (E)
+			for(int i = 0; i < 7; i++)
+				setDataBWlist[i] = dataWhitelist_YEEP0[i];
 		} else if((ROM_TID == 0x54595056) && (ROM_HEADERCRC == 0xC0C0CF56)) {		// Pokemon Conquest (U)
 			for(int i = 0; i < 7; i++)
 				setDataBWlist[i] = dataWhitelist_VPYT0[i];

@@ -51,6 +51,7 @@ extern u32 romSize;
 #define only_1MB_CACHE_SLOTS 0x10
 
 vu32* volatile cardStruct = 0x0C804BC0;
+vu32* volatile fat = 0x0C808000;
 //extern vu32* volatile cacheStruct;
 extern u32 sdk_version;
 extern u32 needFlushDCCache;
@@ -189,6 +190,62 @@ void accessCounterIncrease() {
 	only_accessCounter++;
 }
 
+void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
+	bool isMobiclip = false;
+	
+	// Search for "MODSN3.."
+	for(u32 i = 0; i < CACHE_READ_SIZE; i++) {
+		if(*(u32*)buffer+i == 0x4D4F4453 && *(u32*)buffer+i+4 == 0x4E330A00) {
+			isMobiclip = true;	// It's a MobiClip video, so cache the full file
+			break;
+		}
+	}
+	
+	if(isMobiclip) {
+		u32 endOfFile;
+
+		// Search for address of end of file
+		int i2 = 0;
+		for(u32 i = 0; i < 0x8000; i += 4) {
+			if(fat[i2] >= src) {
+				endOfFile = fat[i2+1];
+				break;
+			}
+			i2 += 2;
+		}
+
+		u32 sector = (src/CACHE_READ_SIZE)*CACHE_READ_SIZE;
+
+		u32 fileSize;
+
+		// Generate file size
+		for(u32 i = src; i < endOfFile; i += CACHE_READ_SIZE) {
+			fileSize = i-src;
+		}
+
+		// Cache full MobiClip video into RAM
+		if(buffer+fileSize < 0x0E000000) {
+			i2 = 0;
+			for(u32 i = src; i < endOfFile; i += CACHE_READ_SIZE) {
+				i2++;
+				accessCounterIncrease();
+				updateDescriptor(slot+i2, sector+CACHE_READ_SIZE*i2);
+			}
+
+			u32 commandRead;
+
+			commandRead = 0x026ff800;
+
+			sharedAddr[0] = buffer+CACHE_READ_SIZE;
+			sharedAddr[1] = fileSize;
+			sharedAddr[2] = src;
+			sharedAddr[3] = commandRead;
+
+			while(sharedAddr[3] != (vu32)0);
+		}
+	}
+}
+
 int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 	//nocashMessage("\narm9 cardRead\n");
 
@@ -319,6 +376,8 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 				} else {
 					updateDescriptor(slot, sector);
 				}
+
+				loadMobiclipVideo(src0, slot, buffer);
 
 				u32 len2=len;
 				if((src - sector) + len2 > CACHE_READ_SIZE){
@@ -476,10 +535,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 				if(setDataBWlist[3]==true && src >= setDataBWlist[0] && src < setDataBWlist[1]) {
 					// if(src >= setDataBWlist[0] && src < setDataBWlist[1]) {
-						u32 src2=src;
-						src2 -= setDataBWlist[0];
-						u32 page2=page;
-						page2 -= setDataBWlist[0];
+						u32 ROM_LOCATION2 = ROM_LOCATION-setDataBWlist[0];
 
 						u32 len2=len;
 						if(len2 > 512) {
@@ -495,7 +551,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 							sharedAddr[0] = dst;
 							sharedAddr[1] = len2;
-							sharedAddr[2] = ROM_LOCATION+src2;
+							sharedAddr[2] = ROM_LOCATION2+src;
 							sharedAddr[3] = commandRead;
 
 							IPC_SendSync(0xEE24);
@@ -506,7 +562,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 							// read ROM loaded into RAM
 							REG_SCFG_EXT = 0x8300C000;
-							copy8(ROM_LOCATION+src2,dst,len2);
+							copy8(ROM_LOCATION2+src,dst,len2);
 							REG_SCFG_EXT = 0x83008000;
 
 							// update cardi common
@@ -521,7 +577,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 							sharedAddr[0] = page;
 							sharedAddr[1] = len2;
-							sharedAddr[2] = ROM_LOCATION+page2;
+							sharedAddr[2] = ROM_LOCATION2+page;
 							sharedAddr[3] = commandRead;
 
 							IPC_SendSync(0xEE24);
@@ -532,7 +588,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 							// read via the 512b ram cache
 							REG_SCFG_EXT = 0x8300C000;
-		                                        copy8(ROM_LOCATION+page2+(src%512), dst, len2);
+		                                        copy8(ROM_LOCATION2+page+(src%512), dst, len2);
                 		                        REG_SCFG_EXT = 0x83008000;
                                 		        cardStruct[0] = src + len2;
                                 		        cardStruct[1] = dst + len2;
@@ -592,7 +648,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							// -------------------------------------
 							commandRead = 0x026ff800;
 
-							sharedAddr[0] = page;
+							sharedAddr[0] = page2;
 							sharedAddr[1] = len2;
 							sharedAddr[2] = ROM_LOCATION+page2;
 							sharedAddr[3] = commandRead;
@@ -605,7 +661,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 							// read via the 512b ram cache
 							REG_SCFG_EXT = 0x8300C000;
-							copy8(ROM_LOCATION+page2+(src%512), dst, len2);
+							copy8(ROM_LOCATION+page2+(src2%512), dst, len2);
 							REG_SCFG_EXT = 0x83008000;
         	                                cardStruct[0] = src + len2;
 	                                        cardStruct[1] = dst + len2;
@@ -667,7 +723,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							// -------------------------------------
 							commandRead = 0x026ff800;
 
-							sharedAddr[0] = page;
+							sharedAddr[0] = page2;
 							sharedAddr[1] = len2;
 							sharedAddr[2] = ROM_LOCATION+page2;
 							sharedAddr[3] = commandRead;
@@ -680,7 +736,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 							// read via the 512b ram cache
 							REG_SCFG_EXT = 0x8300C000;
-							copy8(ROM_LOCATION+page2+(src%512), dst, len2);
+							copy8(ROM_LOCATION+page2+(src2%512), dst, len2);
 							REG_SCFG_EXT = 0x83008000;
         	                                cardStruct[0] = src + len2;
 	                                        cardStruct[1] = dst + len2;
