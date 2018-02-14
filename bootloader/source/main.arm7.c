@@ -62,14 +62,13 @@ void sdmmc_controller_init();
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Important things
-#define TEMP_MEM 0x02FFE000
 #define NDS_HEAD 0x02FFFE00
 #define TEMP_ARM9_START_ADDRESS (*(vu32*)0x02FFFFF4)
 
 #define CHEAT_ENGINE_LOCATION	0x027FE000
 #define CHEAT_DATA_LOCATION  	0x06010000
 #define ENGINE_LOCATION_ARM7  	0x037C0000
-#define ENGINE_LOCATION_ARM9  	0x0C800000
+#define ENGINE_LOCATION_ARM9  	0x0C480000
 
 const char* bootName = "BOOT.NDS";
 
@@ -81,13 +80,12 @@ extern unsigned long argStart;
 extern unsigned long argSize;
 extern unsigned long dsiSD;
 extern unsigned long saveFileCluster;
-extern unsigned long donorFileCluster;
-extern unsigned long useArm7Donor;
-extern unsigned long donorSdkVer;
+extern unsigned long dsiMode;
 extern unsigned long patchMpuRegion;
 extern unsigned long patchMpuSize;
 extern unsigned long loadingScreen;
 
+bool dsiModeConfirmed = false;
 u32 setDataMobicliplist[3] = {0x00000000, 0x00000000, 0x00000000};
 u32 setDataBWlist[7] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
 u32 setDataBWlist_1[3] = {0x00000000, 0x00000000, 0x00000000};
@@ -242,20 +240,22 @@ void resetMemory_ARM7 (void)
 }
 
 
+//u32 ROM_LOCATION = 0x0C4A0000;
 u32 ROM_LOCATION = 0x0D000000;
 u32 ROM_TID;
 u32 ROM_HEADERCRC;
 u32 ARM9_LEN;
+u32 ARM7_LEN;
 u32 romSize;
 
 void loadBinary_ARM7 (aFile file)
 {
-	u32 ndsHeader[0x170>>2];
+	u32 ndsHeader[0x2F0>>2];
 
 	nocashMessage("loadBinary_ARM7");
 
 	// read NDS header
-	fileRead ((char*)ndsHeader, file, 0, 0x170);
+	fileRead ((char*)ndsHeader, file, 0, 0x2F0);
 	// read ARM9 info from NDS header
 	u32 ARM9_SRC = ndsHeader[0x020>>2];
 	char* ARM9_DST = (char*)ndsHeader[0x028>>2];
@@ -263,23 +263,20 @@ void loadBinary_ARM7 (aFile file)
 	// read ARM7 info from NDS header
 	u32 ARM7_SRC = ndsHeader[0x030>>2];
 	char* ARM7_DST = (char*)ndsHeader[0x038>>2];
-	u32 ARM7_LEN = ndsHeader[0x03C>>2];
+	ARM7_LEN = ndsHeader[0x03C>>2];
 
-	u32 FAT_SRC = ndsHeader[0x048>>2];
+	/*u32 FAT_SRC = ndsHeader[0x048>>2];
 	u32 FAT_LEN = ndsHeader[0x04C>>2];
 	if(FAT_LEN > 0x8000) FAT_LEN = 0x8000;
 	
 	u32 fat[0x8000>>2];
 	// Load File Allocation Table into memory
 	fileRead((char*)fat, file, FAT_SRC, FAT_LEN);
-	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);
+	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);*/
 
 	ROM_TID = ndsHeader[0x00C>>2];
 	romSize = ndsHeader[0x080>>2];
 	ROM_HEADERCRC = ndsHeader[0x15C>>2];
-
-	//Fix Pokemon games needing header data. 
-	fileRead ((char*)0x027FF000, file, 0, 0x170);
 	
 	// Load binaries into memory
 	fileRead(ARM9_DST, file, ARM9_SRC, ARM9_LEN);
@@ -290,6 +287,26 @@ void loadBinary_ARM7 (aFile file)
 	TEMP_ARM9_START_ADDRESS = ndsHeader[0x024>>2];		// Store for later
 	ndsHeader[0x024>>2] = 0;
 	dmaCopyWords(3, (void*)ndsHeader, (void*)NDS_HEAD, 0x170);
+
+	if (dsiMode && (ndsHeader[0x10>>2]&BIT(16+1)))
+	{
+		dsiModeConfirmed = true;
+
+		u32 ARM9i_SRC = ndsHeader[0x1C0>>2];
+		char* ARM9i_DST = (char*)ndsHeader[0x1C8>>2];
+		u32 ARM9i_LEN = ndsHeader[0x1CC>>2];
+		u32 ARM7i_SRC = ndsHeader[0x1D0>>2];
+		char* ARM7i_DST = (char*)ndsHeader[0x1D8>>2];
+		u32 ARM7i_LEN = ndsHeader[0x1DC>>2];
+
+		if (ARM9i_LEN)
+			fileRead(ARM9i_DST, file, ARM9i_SRC, ARM9i_LEN);
+		if (ARM7i_LEN)
+			fileRead(ARM7i_DST, file, ARM7i_SRC, ARM7i_LEN);
+	} else {
+		// Switch to NTR Mode
+		REG_SCFG_ROM = 0x703;
+	}
 }
 
 void loadRomIntoRam(aFile file) {
@@ -309,12 +326,21 @@ void loadRomIntoRam(aFile file) {
 	romSize -= 0x4000;
 	romSize -= ARM9_LEN;
 
-	if((romSize > 0) && (romSize <= 0x01000000)) {
+	/*if(dsiModeConfirmed && (romSize > 0) && (romSize <= 0x01000000)) {
+		ROM_LOCATION = 0x0D000000;
 		ROMinRAM = 1;
-		arm9_extRAM = true;
+		arm9_extRAM = 2;
 		while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
-		arm9_extRAM = false;
+		arm9_extRAM = 1;
+		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
+	//} else if((romSize > 0) && (romSize <= 0x01C60000)) {
+	} else */ if((romSize > 0) && (romSize <= 0x01000000)) {
+		ROMinRAM = 1;
+		arm9_extRAM = 2;
+		while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
+		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
+		arm9_extRAM = 1;
 		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 	} else {
 		if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
@@ -333,7 +359,7 @@ void loadRomIntoRam(aFile file) {
 		if(setDataBWlist[0] != 0 && setDataBWlist[1] != 0 && setDataBWlist[2] != 0){
 			ROMinRAM = 2;
 			if(setDataBWlist[3] == 1) {
-				arm9_extRAM = true;
+				arm9_extRAM = 2;
 				while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 				fileRead(ROM_LOCATION, file, setDataBWlist[0], setDataBWlist[2]);
 				if(dataAmount >= 1) {
@@ -342,12 +368,12 @@ void loadRomIntoRam(aFile file) {
 				if(dataAmount == 2) {
 					fileRead(ROM_LOCATION+setDataBWlist[2]+setDataBWlist_1[2], file, setDataBWlist_2[0], setDataBWlist_2[2]);
 				}
-				arm9_extRAM = false;
+				arm9_extRAM = 1;
 				while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 			} else if(setDataBWlist[3] == 0) {
 				setDataBWlist[0] -= 0x4000;
 				setDataBWlist[0] -= ARM9_LEN;
-				arm9_extRAM = true;
+				arm9_extRAM = 2;
 				while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 				fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, setDataBWlist[0]);
 				u32 lastRomSize = 0;
@@ -355,7 +381,7 @@ void loadRomIntoRam(aFile file) {
 					lastRomSize++;
 				}
 				fileRead(ROM_LOCATION+setDataBWlist[0], file, setDataBWlist[1], lastRomSize);
-				arm9_extRAM = false;
+				arm9_extRAM = 1;
 				while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 			}
 		}
@@ -481,7 +507,6 @@ void arm7_main (void) {
 	}
 
 	aFile file = getFileFromCluster (storedFileCluster);
-	aFile donorFile = getFileFromCluster (donorFileCluster);
 
 	if ((file.firstCluster < CLUSTER_FIRST) || (file.firstCluster >= CLUSTER_EOF)) 	/* Invalid file cluster specified */
 	{
@@ -534,14 +559,14 @@ void arm7_main (void) {
 		copyLoop (ENGINE_LOCATION_ARM9, (u32*)cardengine_arm9_bin, cardengine_arm9_bin_size);
 		increaseLoadBarLength();	// 4 dots
 
-		module_params_t* params = findModuleParams(NDS_HEAD, donorSdkVer);
+		module_params_t* params = findModuleParams(NDS_HEAD);
 		if(params)
 		{
 			ensureArm9Decompressed(NDS_HEAD, params);
 		}
 		increaseLoadBarLength();	// 5 dots
 
-		errorCode = patchCardNds(NDS_HEAD,ENGINE_LOCATION_ARM7,ENGINE_LOCATION_ARM9,params,saveFileCluster, patchMpuRegion, patchMpuSize, donorFile, useArm7Donor);
+		errorCode = patchCardNds(NDS_HEAD,ENGINE_LOCATION_ARM7,ENGINE_LOCATION_ARM9,params,saveFileCluster, patchMpuRegion, patchMpuSize);
 		increaseLoadBarLength();	// 6 dots
 
 		errorCode = hookNdsRetail(NDS_HEAD, file, (const u32*)CHEAT_DATA_LOCATION, (u32*)CHEAT_ENGINE_LOCATION, (u32*)ENGINE_LOCATION_ARM7);

@@ -20,11 +20,14 @@
 #include <nds/fifomessages.h>
 #include "cardEngine.h"
 
+//static u32 ROM_LOCATION = 0x0C4A0000;
 static u32 ROM_LOCATION = 0x0D000000;
 extern u32 ROM_TID;
 extern u32 ROM_HEADERCRC;
 extern u32 ARM9_LEN;
 extern u32 romSize;
+static u32 SCFG_EXT_CACHEACCESS = 0x8300C000;
+static u32 SCFG_EXT_NORM = 0x83008000;
 
 #define _32KB_READ_SIZE 0x8000
 #define _64KB_READ_SIZE 0x10000
@@ -41,38 +44,43 @@ extern u32 romSize;
 #define WRAM_CACHE_ADRESS_SIZE 0x78000
 #define WRAM_CACHE_SLOTS 15
 
-#define MobiClip_CACHE_ADRESS_START 0x0C880000
-#define MobiClip_CACHE_ADRESS_SIZE 0x580000
+//#define MobiClip_CACHE_ADRESS_START 0x0C880000
+//#define MobiClip_CACHE_ADRESS_SIZE 0x580000
 
-#define only_CACHE_ADRESS_START 0x0D000000
-#define only_CACHE_ADRESS_SIZE 0x1000000
-#define only_128KB_CACHE_SLOTS 0x80
-#define only_192KB_CACHE_SLOTS 0x55
-#define only_256KB_CACHE_SLOTS 0x40
-#define only_512KB_CACHE_SLOTS 0x20
-#define only_768KB_CACHE_SLOTS 0x15
-#define only_1MB_CACHE_SLOTS 0x10
+#define dsMode_CACHE_ADRESS_START 0x0C4A0000
+#define dsMode_CACHE_ADRESS_SIZE 0x1C60000
+#define dsMode_128KB_CACHE_SLOTS 0xE3
+#define dsiMode_CACHE_ADRESS_START 0x0D000000
+#define dsiMode_CACHE_ADRESS_SIZE 0x1000000
+#define dsiMode_128KB_CACHE_SLOTS 0x80
+//#define dsiMode_192KB_CACHE_SLOTS 0x55
+//#define dsiMode_256KB_CACHE_SLOTS 0x40
+//#define dsiMode_512KB_CACHE_SLOTS 0x20
+//#define dsiMode_768KB_CACHE_SLOTS 0x15
+//#define dsiMode_1MB_CACHE_SLOTS 0x10
 
-vu32* volatile cardStruct = 0x0C804BC0;
-vu32* volatile fat = 0x0C808000;
+vu32* volatile cardStruct = 0x0C497BC0;
+//vu32* volatile fat = 0x0C808000;
 //extern vu32* volatile cacheStruct;
 extern u32 sdk_version;
 extern u32 needFlushDCCache;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
 extern volatile int (*readCachedRef)(u32*); // this pointer is not at the end of the table but at the handler pointer corresponding to the current irq
 
-static u32 MobiClip_cacheDescriptor [1];
-static u32 MobiClip_cacheCounter [1];
-static u32 only_cacheDescriptor [only_128KB_CACHE_SLOTS];
-static u32 only_cacheCounter [only_128KB_CACHE_SLOTS];
-static u32 MobiClip_accessCounter = 0;
-static u32 only_accessCounter = 0;
+//static u32 MobiClip_cacheDescriptor [1];
+//static u32 MobiClip_cacheCounter [1];
+static u32 cacheDescriptor [dsMode_128KB_CACHE_SLOTS];
+static u32 cacheCounter [dsMode_128KB_CACHE_SLOTS];
+//static u32 MobiClip_accessCounter = 0;
+static u32 accessCounter = 0;
 
 static u32 CACHE_READ_SIZE = _128KB_READ_SIZE;
 
 static bool flagsSet = false;
 extern u32 ROMinRAM;
 static int use16MB = 0;
+extern u32 dsiMode;
+//static bool mobiClip = false;
 
 extern u32 setDataMobicliplist[3];
 extern u32 setDataBWlist[7];
@@ -92,7 +100,7 @@ void setExceptionHandler2() {
 	*exceptionC = user_exception;
 }
 
-int MobiClip_allocateCacheSlot() {
+/*int MobiClip_allocateCacheSlot() {
 	int slot = 0;
 	int lowerCounter = MobiClip_accessCounter;
 	for(int i=0; i<1; i++) {
@@ -103,16 +111,26 @@ int MobiClip_allocateCacheSlot() {
 		}
 	}
 	return slot;
-}
+}*/
 
 int allocateCacheSlot() {
 	int slot = 0;
-	int lowerCounter = only_accessCounter;
-	for(int i=0; i<only_128KB_CACHE_SLOTS; i++) {
-		if(only_cacheCounter[i]<=lowerCounter) {
-			lowerCounter = only_cacheCounter[i];
-			slot = i;
-			if(!lowerCounter) break;
+	int lowerCounter = accessCounter;
+	if(dsiMode) {
+		for(int i=0; i<dsiMode_128KB_CACHE_SLOTS; i++) {
+			if(cacheCounter[i]<=lowerCounter) {
+				lowerCounter = cacheCounter[i];
+				slot = i;
+				if(!lowerCounter) return slot;
+			}
+		}
+	} else {
+		for(int i=0; i<dsMode_128KB_CACHE_SLOTS; i++) {
+			if(cacheCounter[i]<=lowerCounter) {
+				lowerCounter = cacheCounter[i];
+				slot = i;
+				if(!lowerCounter) return slot;
+			}
 		}
 	}
 	return slot;
@@ -120,10 +138,10 @@ int allocateCacheSlot() {
 
 int GAME_allocateCacheSlot() {
 	int slot = 0;
-	int lowerCounter = only_accessCounter;
+	int lowerCounter = accessCounter;
 	for(int i=0; i<setDataBWlist[5]; i++) {
-		if(only_cacheCounter[i]<=lowerCounter) {
-			lowerCounter = only_cacheCounter[i];
+		if(cacheCounter[i]<=lowerCounter) {
+			lowerCounter = cacheCounter[i];
 			slot = i;
 			if(!lowerCounter) break;
 		}
@@ -131,19 +149,27 @@ int GAME_allocateCacheSlot() {
 	return slot;
 }
 
-int MobiClip_getSlotForSector(u32 sector) {
+/*int MobiClip_getSlotForSector(u32 sector) {
 	for(int i=0; i<1; i++) {
 		if(MobiClip_cacheDescriptor[i]==sector) {
 			return i;
 		}
 	}
 	return -1;
-}
+}*/
 
 int getSlotForSector(u32 sector) {
-	for(int i=0; i<only_128KB_CACHE_SLOTS; i++) {
-		if(only_cacheDescriptor[i]==sector) {
-			return i;
+	if(dsiMode) {
+		for(int i=0; i<dsiMode_128KB_CACHE_SLOTS; i++) {
+			if(cacheDescriptor[i]==sector) {
+				return i;
+			}
+		}
+	} else {
+		for(int i=0; i<dsMode_128KB_CACHE_SLOTS; i++) {
+			if(cacheDescriptor[i]==sector) {
+				return i;
+			}
 		}
 	}
 	return -1;
@@ -151,7 +177,7 @@ int getSlotForSector(u32 sector) {
 
 int GAME_getSlotForSector(u32 sector) {
 	for(int i=0; i<setDataBWlist[5]; i++) {
-		if(only_cacheDescriptor[i]==sector) {
+		if(cacheDescriptor[i]==sector) {
 			return i;
 		}
 	}
@@ -159,30 +185,34 @@ int GAME_getSlotForSector(u32 sector) {
 }
 
 
-vu8* MobiClip_getCacheAddress(int slot) {
-	return (vu32*)(MobiClip_CACHE_ADRESS_START+slot*setDataMobicliplist[2]);
-}
+/*vu8* MobiClip_getCacheAddress() {
+	return (vu32*)(MobiClip_CACHE_ADRESS_START);
+}*/
 
 vu8* getCacheAddress(int slot) {
-	return (vu32*)(only_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
+	if(dsiMode) {
+		return (vu32*)(dsiMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
+	} else {
+		return (vu32*)(dsMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
+	}
 }
 
 vu8* GAME_getCacheAddress(int slot) {
 	return (vu32*)(setDataBWlist[4]+slot*setDataBWlist[6]);
 }
 
-void MobiClip_updateDescriptor(int slot, u32 sector) {
+/*void MobiClip_updateDescriptor(int slot, u32 sector) {
 	MobiClip_cacheDescriptor[slot] = sector;
 	MobiClip_cacheCounter[slot] = MobiClip_accessCounter;
-}
+}*/
 
 void updateDescriptor(int slot, u32 sector) {
-	only_cacheDescriptor[slot] = sector;
-	only_cacheCounter[slot] = only_accessCounter;
+	cacheDescriptor[slot] = sector;
+	cacheCounter[slot] = accessCounter;
 }
 
 void accessCounterIncrease() {
-	only_accessCounter++;
+	accessCounter++;
 }
 
 /* void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
@@ -263,10 +293,21 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 	if(!flagsSet) {
 		// If ROM size is 0x01000000 or below, then the ROM is in RAM.
-		if((romSize > 0) && (romSize <= 0x01000000) || setDataBWlist[3]==false) {
+		if(dsiMode) {
+			SCFG_EXT_CACHEACCESS = 0x8307F100;
+			SCFG_EXT_NORM = 0x8307B100;
+			if((romSize > 0) && (romSize <= dsiMode_CACHE_ADRESS_SIZE) || setDataBWlist[3]==false) {
+				ROM_LOCATION = 0x0D000000;
+				ROM_LOCATION -= 0x4000;
+				ROM_LOCATION -= ARM9_LEN;
+			}
+		} else if((romSize > 0) && (romSize <= dsiMode_CACHE_ADRESS_SIZE) || setDataBWlist[3]==false) {
 			ROM_LOCATION -= 0x4000;
 			ROM_LOCATION -= ARM9_LEN;
 		}
+		/*if(setDataMobicliplist[0] != 0 && setDataMobicliplist[1] != 0 && setDataMobicliplist[2] != 0) {
+			mobiClip = true;
+		}*/
 		flagsSet = true;
 	}
 
@@ -316,13 +357,12 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 			if(ROMinRAM==0) {
 				int slot = 0;
 				vu8* buffer = 0;
-				if(setDataMobicliplist[0] != 0 && setDataMobicliplist[1] != 0 && setDataMobicliplist[2] != 0
-				&& src >= setDataMobicliplist[0] && src < setDataMobicliplist[1]){
+				/*if(mobiClip && src >= setDataMobicliplist[0] && src < setDataMobicliplist[1]){
 					CACHE_READ_SIZE = setDataMobicliplist[2];
 					sector = (src/CACHE_READ_SIZE)*CACHE_READ_SIZE;
 
 					slot = MobiClip_getSlotForSector(sector);
-					buffer = MobiClip_getCacheAddress(slot);
+					buffer = MobiClip_getCacheAddress();
 					// read max CACHE_READ_SIZE via the main RAM cache
 					if(slot==-1) {
 						// send a command to the arm7 to fill the RAM cache
@@ -330,11 +370,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 						slot = MobiClip_allocateCacheSlot();
 
-						buffer = MobiClip_getCacheAddress(slot);
-
-						//REG_SCFG_EXT = 0x8300C000;
-
-						if(needFlushDCCache) DC_FlushRange(buffer, CACHE_READ_SIZE);
+						buffer = MobiClip_getCacheAddress();
 
 						// write the command
 						sharedAddr[0] = buffer;
@@ -345,12 +381,10 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						IPC_SendSync(0xEE24);
 
 						while(sharedAddr[3] != (vu32)0);
-
-						//REG_SCFG_EXT = 0x83008000;
 					}
 
 					MobiClip_updateDescriptor(slot, sector);
-				} else {
+				} else {*/
 					slot = getSlotForSector(sector);
 					buffer = getCacheAddress(slot);
 					// read max CACHE_READ_SIZE via the main RAM cache
@@ -362,7 +396,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 						buffer = getCacheAddress(slot);
 
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 
 						if(needFlushDCCache) DC_FlushRange(buffer, CACHE_READ_SIZE);
 
@@ -376,13 +410,13 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 						while(sharedAddr[3] != (vu32)0);
 
-						REG_SCFG_EXT = 0x83008000;
+						REG_SCFG_EXT = SCFG_EXT_NORM;
 					}
 
 					updateDescriptor(slot, sector);
 
 					//loadMobiclipVideo(src0, slot, buffer);
-				}
+				//}
 
 				u32 len2=len;
 				if((src - sector) + len2 > CACHE_READ_SIZE){
@@ -412,9 +446,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 					#endif
 
 					// copy directly
-					REG_SCFG_EXT = 0x8300C000;
+					REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 					copy8(buffer+(src-sector),dst,len2);
-					REG_SCFG_EXT = 0x83008000;
+					REG_SCFG_EXT = SCFG_EXT_NORM;
 
 					// update cardi common
 					cardStruct[0] = src + len2;
@@ -438,9 +472,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 					#endif
 
 					// read via the 512b ram cache
-					REG_SCFG_EXT = 0x8300C000;
+					REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 					copy8(buffer+(page-sector)+(src%512), dst, len2);
-					REG_SCFG_EXT = 0x83008000;
+					REG_SCFG_EXT = SCFG_EXT_NORM;
 					cardStruct[0] = src + len2;
                                         cardStruct[1] = dst + len2;
                                         cardStruct[2] = len - len2;
@@ -488,9 +522,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 					#endif
 
 					// read ROM loaded into RAM
-					REG_SCFG_EXT = 0x8300C000;
+					REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 					copy8(ROM_LOCATION+src,dst,len2);
-					REG_SCFG_EXT = 0x83008000;
+					REG_SCFG_EXT = SCFG_EXT_NORM;
 
 					// update cardi common
 					cardStruct[0] = src + len2;
@@ -514,9 +548,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 					#endif
 
 					// read via the 512b ram cache
-					REG_SCFG_EXT = 0x8300C000;
+					REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
                                         copy8(ROM_LOCATION+page+(src%512), dst, len2);
-                                        REG_SCFG_EXT = 0x83008000;
+                                        REG_SCFG_EXT = SCFG_EXT_NORM;
                                         cardStruct[0] = src + len2;
                                         cardStruct[1] = dst + len2;
                                         cardStruct[2] = len - len2;
@@ -565,9 +599,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							#endif
 
 							// read ROM loaded into RAM
-							REG_SCFG_EXT = 0x8300C000;
+							REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 							copy8(ROM_LOCATION2+src,dst,len2);
-							REG_SCFG_EXT = 0x83008000;
+							REG_SCFG_EXT = SCFG_EXT_NORM;
 
 							// update cardi common
 							cardStruct[0] = src + len2;
@@ -591,9 +625,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							#endif
 
 							// read via the 512b ram cache
-							REG_SCFG_EXT = 0x8300C000;
+							REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 		                                        copy8(ROM_LOCATION2+page+(src%512), dst, len2);
-                		                        REG_SCFG_EXT = 0x83008000;
+                		                        REG_SCFG_EXT = SCFG_EXT_NORM;
                                 		        cardStruct[0] = src + len2;
                                 		        cardStruct[1] = dst + len2;
 		                                        cardStruct[2] = len - len2;
@@ -638,9 +672,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							#endif
 
 							// read ROM loaded into RAM
-							REG_SCFG_EXT = 0x8300C000;
+							REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 							copy8(ROM_LOCATION+src2,dst,len2);
-							REG_SCFG_EXT = 0x83008000;
+							REG_SCFG_EXT = SCFG_EXT_NORM;
 
 							// update cardi common
 							cardStruct[0] = src + len2;
@@ -664,9 +698,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							#endif
 
 							// read via the 512b ram cache
-							REG_SCFG_EXT = 0x8300C000;
+							REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 							copy8(ROM_LOCATION+page2+(src2%512), dst, len2);
-							REG_SCFG_EXT = 0x83008000;
+							REG_SCFG_EXT = SCFG_EXT_NORM;
         	                                cardStruct[0] = src + len2;
 	                                        cardStruct[1] = dst + len2;
                                 	        cardStruct[2] = len - len2;
@@ -713,9 +747,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							#endif
 
 							// read ROM loaded into RAM
-							REG_SCFG_EXT = 0x8300C000;
+							REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 							copy8(ROM_LOCATION+src2,dst,len2);
-							REG_SCFG_EXT = 0x83008000;
+							REG_SCFG_EXT = SCFG_EXT_NORM;
 
 							// update cardi common
 							cardStruct[0] = src + len2;
@@ -739,9 +773,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 							#endif
 
 							// read via the 512b ram cache
-							REG_SCFG_EXT = 0x8300C000;
+							REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 							copy8(ROM_LOCATION+page2+(src2%512), dst, len2);
-							REG_SCFG_EXT = 0x83008000;
+							REG_SCFG_EXT = SCFG_EXT_NORM;
         	                                cardStruct[0] = src + len2;
 	                                        cardStruct[1] = dst + len2;
                                 	        cardStruct[2] = len - len2;
@@ -779,9 +813,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						#endif
 
 						// read ROM loaded into RAM
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 						copy8(ROM_LOCATION+src,dst,len2);
-						REG_SCFG_EXT = 0x83008000;
+						REG_SCFG_EXT = SCFG_EXT_NORM;
 
 						// update cardi common
 						cardStruct[0] = src + len2;
@@ -805,9 +839,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						#endif
 
 						// read via the 512b ram cache
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
                         	                copy8(ROM_LOCATION+page+(src%512), dst, len2);
-                	                        REG_SCFG_EXT = 0x83008000;
+                	                        REG_SCFG_EXT = SCFG_EXT_NORM;
         	                                cardStruct[0] = src + len2;
 	                                        cardStruct[1] = dst + len2;
                                 	        cardStruct[2] = len - len2;
@@ -844,9 +878,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						#endif
 
 						// read ROM loaded into RAM
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 						copy8(ROM_LOCATION-setDataBWlist[2]+src,dst,len2);
-						REG_SCFG_EXT = 0x83008000;
+						REG_SCFG_EXT = SCFG_EXT_NORM;
 
 						// update cardi common
 						cardStruct[0] = src + len2;
@@ -870,9 +904,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						#endif
 
 						// read via the 512b ram cache
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
         	                                copy8(ROM_LOCATION-setDataBWlist[2]+page+(src%512), dst, len2);
-	                                        REG_SCFG_EXT = 0x83008000;
+	                                        REG_SCFG_EXT = SCFG_EXT_NORM;
                 	                        cardStruct[0] = src + len2;
                         	                cardStruct[1] = dst + len2;
                                 	        cardStruct[2] = len - len2;
@@ -885,7 +919,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						page = (src/512)*512;
 					}
 				} else if(page == src && len > setDataBWlist[6] && dst < 0x02700000 && dst > 0x02000000 && ((u32)dst)%4==0) {
-					only_accessCounter++;
+					accessCounter++;
 
 					// read directly at arm7 level
 					commandRead = 0x025FFB08;
@@ -901,7 +935,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 					while(sharedAddr[3] != (vu32)0);
 				} else {
-					only_accessCounter++;
+					accessCounter++;
 
 					u32 sector = (src/setDataBWlist[6])*setDataBWlist[6];
 
@@ -916,7 +950,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 						buffer = GAME_getCacheAddress(slot);
 
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 
 						if(needFlushDCCache) DC_FlushRange(buffer, setDataBWlist[6]);
 
@@ -930,7 +964,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 						while(sharedAddr[3] != (vu32)0);
 
-						REG_SCFG_EXT = 0x83008000;
+						REG_SCFG_EXT = SCFG_EXT_NORM;
 					}
 
 					updateDescriptor(slot, sector);
@@ -963,9 +997,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						#endif
 
 						// copy directly
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 						copy8(buffer+(src-sector),dst,len2);
-						REG_SCFG_EXT = 0x83008000;
+						REG_SCFG_EXT = SCFG_EXT_NORM;
 
 						// update cardi common
 						cardStruct[0] = src + len2;
@@ -989,9 +1023,9 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						#endif
 
 						// read via the 512b ram cache
-						REG_SCFG_EXT = 0x8300C000;
+						REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
                                 	        copy8(buffer+(page-sector)+(src%512), dst, len2);
-                	                        REG_SCFG_EXT = 0x83008000;
+                	                        REG_SCFG_EXT = SCFG_EXT_NORM;
         	                                cardStruct[0] = src + len2;
 	                                        cardStruct[1] = dst + len2;
                                         	cardStruct[2] = len - len2;
@@ -1003,7 +1037,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						dst = cardStruct[1];
 						page = (src/512)*512;
 						sector = (src/setDataBWlist[6])*setDataBWlist[6];
-						only_accessCounter++;
+						accessCounter++;
 					}
 				}
 			}

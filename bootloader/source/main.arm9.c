@@ -43,7 +43,7 @@ volatile int arm9_stateFlag = ARM9_BOOT;
 volatile u32 arm9_BLANK_RAM = 0;
 volatile bool arm9_errorColor = false;
 volatile int arm9_screenMode = 0;	// 0 = Regular, 1 = Pong, 2 = Tic-Tac-Toe
-volatile bool arm9_extRAM = false;
+volatile int arm9_extRAM = 1;
 volatile u32 arm9_SCFG_EXT = 0;
 volatile int arm9_loadBarLength = 0;
 volatile bool arm9_animateLoadingCircle = false;
@@ -1263,10 +1263,12 @@ void arm9_main (void)
 	// set ARM9 state to ready and wait for it to change again
 	arm9_stateFlag = ARM9_READY;
 	while ( arm9_stateFlag != ARM9_BOOTBIN ) {
-		if(arm9_extRAM) {
+		if(arm9_extRAM==2) {
 			REG_SCFG_EXT = 0x8300C000;
-		} else {
+		} else if(arm9_extRAM==1) {
 			REG_SCFG_EXT = 0x83008000;
+		} else {
+			REG_SCFG_EXT = 0x83000000;
 		}
 		*(u32*)(0x23ffc40) = 01;
 		*(u32*)(0x2fffc40) = 01;
@@ -1296,7 +1298,6 @@ void arm9_main (void)
 	while(REG_VCOUNT==191);
 	VoidFn arm9code = *(VoidFn*)(0x2FFFE24);
 	arm9code();
-	*(u32*)(0x4004008) = 0x83008000;
 	while(1);
 }
 

@@ -21,9 +21,12 @@
 #include "cardengine_arm7_bin.h"
 #include "fat.h"
 
+extern bool dsiModeConfirmed;
+
 extern u32 ROM_TID;
 extern u32 ROM_HEADERCRC;
 extern u32 ARM9_LEN;
+extern u32 ARM7_LEN;
 extern u32 romSize;
 
 extern u32 setDataMobicliplist[3];
@@ -272,26 +275,26 @@ int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, const u32* cheatData
 
 	if(!hookLocation){
 
-		if(*(u32*)(0x27FF03C) == 0x00022B40){
+		if(ARM7_LEN == 0x00022B40){
 			hookLocation = 0x238DED8;
-		}else if(*(u32*)(0x27FF03C) == 0x00022BCC){
+		}else if(ARM7_LEN == 0x00022BCC){
 			hookLocation = 0x238DF60;
-		}else if(*(u32*)(0x27FF03C) == 0x00028F84){
+		}else if(ARM7_LEN == 0x00028F84){
 			hookLocation = 0x2391918;
-		}else if(*(u32*)(0x27FF03C) == 0x0002909C){
+		}else if(ARM7_LEN == 0x0002909C){
 			hookLocation = 0x2391A30;
-		}else if((*(u32*)(0x27FF03C) == 0x0002914C)
-				||(*(u32*)(0x27FF03C) == 0x00029164)){
+		}else if((ARM7_LEN == 0x0002914C)
+				||(ARM7_LEN == 0x00029164)){
 			hookLocation = 0x2391ADC;
-		}else if(*(u32*)(0x27FF03C) == 0x00029EE8){
+		}else if(ARM7_LEN == 0x00029EE8){
 			hookLocation = 0x2391F70;
-		}else if(*(u32*)(0x27FF03C) == 0x0002A2EC){
+		}else if(ARM7_LEN == 0x0002A2EC){
 			hookLocation = 0x23921BC;
-		}else if(*(u32*)(0x27FF03C) == 0x0002A318){
+		}else if(ARM7_LEN == 0x0002A318){
 			hookLocation = 0x23921D8;
-		}else if(*(u32*)(0x27FF03C) == 0x0002AF18){
+		}else if(ARM7_LEN == 0x0002AF18){
 			hookLocation = 0x239227C;
-		}else if(*(u32*)(0x27FF03C) == 0x0002C5B4){
+		}else if(ARM7_LEN == 0x0002C5B4){
 			hookLocation = 0x2392E74;
 		}
 
@@ -343,22 +346,23 @@ void hookNdsRetail_ROMinRAM (u32* cardEngineLocation9, u32 ROMinRAM) {
 	cardEngineLocation9[9] = ROM_HEADERCRC;
 	cardEngineLocation9[10] = ARM9_LEN;
 	cardEngineLocation9[11] = romSize;
+	cardEngineLocation9[12] = dsiModeConfirmed;
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[12+i] = setDataMobicliplist[i];
+		cardEngineLocation9[13+i] = setDataMobicliplist[i];
 	}
 	for(int i = 0; i < 7; i++) {
-		cardEngineLocation9[15+i] = setDataBWlist[i];
+		cardEngineLocation9[16+i] = setDataBWlist[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[22+i] = setDataBWlist_1[i];
+		cardEngineLocation9[23+i] = setDataBWlist_1[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[25+i] = setDataBWlist_2[i];
+		cardEngineLocation9[26+i] = setDataBWlist_2[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[28+i] = setDataBWlist_3[i];
+		cardEngineLocation9[29+i] = setDataBWlist_3[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[31+i] = setDataBWlist_4[i];
+		cardEngineLocation9[32+i] = setDataBWlist_4[i];
 	}
 }

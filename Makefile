@@ -115,7 +115,7 @@ endif
 
 export GAME_TITLE := $(TARGET)
 
-.PHONY: cardengine_arm7 cardengine_arm9 bootloader BootStrap clean
+.PHONY: cardengine_arm7 cardengine_arm9 bootloader clean $(TARGET).arm7 $(TARGET).arm9
 
 all:	cardengine_arm7 cardengine_arm9 bootloader $(TARGET).nds
 

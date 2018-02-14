@@ -106,7 +106,7 @@ u32 generateA7Instr(int arg1, int arg2) {
     return (((u32)(arg2 - arg1 - 8) >> 2) & 0xFFFFFF) | 0xEB000000;
 }
 
-module_params_t* findModuleParams(const tNDSHeader* ndsHeader, u32 donorSdkVer)
+module_params_t* findModuleParams(const tNDSHeader* ndsHeader)
 {
 	dbg_printf("Looking for moduleparams\n");
 	uint32_t moduleparams = getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize, (u32*)moduleParamsSignature, 2, 1);
@@ -403,7 +403,7 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	return 0;
 }
 
-u32 patchCardNdsArm9Overlay (u32* overlayLocation, u32 overlayLocationSize, u32* cardEngineLocation, module_params_t* moduleParams, u32 patchMpuRegion, u32 patchMpuSize) {
+/*u32 patchCardNdsArm9Overlay (u32* overlayLocation, u32 overlayLocationSize, u32* cardEngineLocation, module_params_t* moduleParams, u32 patchMpuRegion, u32 patchMpuSize) {
 
 	u32* debug = (u32*)0x03786000;
 	debug[4] = overlayLocation;
@@ -634,9 +634,9 @@ u32 patchCardNdsArm9Overlay (u32* overlayLocation, u32 overlayLocationSize, u32*
 
 	dbg_printf("ERR_NONE");
 	return 0;
-}
+}*/
 
-u32 savePatchV2 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster) {
+/*u32 savePatchV2 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster) {
 
     dbg_printf("\nArm7 (patch v2.0)\n");
 
@@ -1135,7 +1135,7 @@ u32 savePatchV1 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 	dbg_printf("Arm7 patched!\n");
 
     return 1;
-}
+}*/
 
 void swapBinary_ARM7(aFile donorfile)
 {
@@ -1157,7 +1157,7 @@ void swapBinary_ARM7(aFile donorfile)
 	NDS_HEAD[0x03C>>2] = ARM7_LEN;
 }
 
-u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster, aFile donorFile, u32 useArm7Donor) {
+u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster) {
 	u32* debug = (u32*)0x03786000;
 
 	u32* irqEnableStartSignature = irqEnableStartSignature1;
@@ -1200,40 +1200,15 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	copyLoop ((u32*)cardIrqEnableOffset, cardIrqEnablePatch, 0x30);
 
-	u32 saveResult = 0;
-	/*if (useArm7Donor == 2) {
-		if ((donorFile.firstCluster >= CLUSTER_FIRST) && (donorFile.firstCluster < CLUSTER_EOF)) {			
-			dbg_printf("swap the arm7 binary");	
-			swapBinary_ARM7(donorFile);
-			// apply the arm7 binary swap and the save patch, assume save v2 nds file
-			saveResult = savePatchV2(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);
-		} else {
-			dbg_printf("no arm7 binary specified for swapping");	
-		}
-	} else if (useArm7Donor == 1) {
-		saveResult = savePatchV1(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);
-		if(!saveResult) saveResult = savePatchV2(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);
-		if(!saveResult) {
-			if ((donorFile.firstCluster >= CLUSTER_FIRST) && (donorFile.firstCluster < CLUSTER_EOF)) {			
-				dbg_printf("swap the arm7 binary");	
-				swapBinary_ARM7(donorFile);
-				// apply the arm7 binary swap and the save patch again, assume save v2 nds file
-				saveResult = savePatchV2(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);
-			} else {
-				dbg_printf("no arm7 binary specified for swapping");	
-			}
-		}
-	} else {
-		saveResult = savePatchV1(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);
-		if(!saveResult) saveResult = savePatchV2(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);
-	}*/
+	//u32 saveResult = 0;
+	//saveResult = savePatchV5(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);
 
 	dbg_printf("ERR_NONE");
 	return 0;
 }
 
 u32 patchCardNds (const tNDSHeader* ndsHeader, u32* cardEngineLocationArm7, u32* cardEngineLocationArm9, module_params_t* moduleParams, 
-		u32 saveFileCluster, u32 patchMpuRegion, u32 patchMpuSize, aFile donorFile, u32 useArm7Donor) {
+		u32 saveFileCluster, u32 patchMpuRegion, u32 patchMpuSize) {
 
 	//Debug stuff.
 
@@ -1243,7 +1218,7 @@ u32 patchCardNds (const tNDSHeader* ndsHeader, u32* cardEngineLocationArm7, u32*
 	dbg_printf("patchCardNds");
 
 	patchCardNdsArm9(ndsHeader, cardEngineLocationArm9, moduleParams, patchMpuRegion, patchMpuSize);
-	patchCardNdsArm7(ndsHeader, cardEngineLocationArm7, moduleParams, saveFileCluster, donorFile, useArm7Donor);
+	patchCardNdsArm7(ndsHeader, cardEngineLocationArm7, moduleParams, saveFileCluster);
 
 	dbg_printf("ERR_NONE");
 	return 0;

@@ -36,6 +36,7 @@
 	.global patchMpuRegion
 	.global patchMpuSize
 	.global loadingScreen
+	.global dsiMode
 @---------------------------------------------------------------------------------
 	.align	4
 	.arm
@@ -61,18 +62,14 @@ dsiSD:
 	.word	0
 saveFileCluster:
 	.word	0x00000000		@ .sav file
-donorFileCluster:
-	.word	0x00000000		@ donor .nds file
-useArm7Donor:
+dsiMode:
 	.word	0x00000000
-donorSdkVer:
-	.word	0x00000000		@ donor SDK version
 patchMpuRegion:
-	.word	0x00000000		
+	.word	0x00000000
 patchMpuSize:
-	.word	0x00000000		
+	.word	0x00000000
 loadingScreen:
-	.word	0x00000000		
+	.word	0x00000000
 
 startUp:
 	mov	r0, #0x04000000
