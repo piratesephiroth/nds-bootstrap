@@ -334,7 +334,7 @@ void loadRomIntoRam(aFile file) {
 		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
 		arm9_extRAM = 1;
 		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
-	//} else if((romSize > 0) && (romSize <= 0x01B60000)) {
+	//} else if((romSize > 0) && (romSize <= 0x01B40000)) {
 	} else */ if((romSize > 0) && (romSize <= 0x01000000)) {
 		ROMinRAM = 1;
 		arm9_extRAM = 2;

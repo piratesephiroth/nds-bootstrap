@@ -48,8 +48,9 @@ static u32 SCFG_EXT_NORM = 0x83008000;
 //#define MobiClip_CACHE_ADRESS_SIZE 0x580000
 
 #define dsMode_CACHE_ADRESS_START 0x0C4A0000
-#define dsMode_CACHE_ADRESS_SIZE 0x1B60000
-#define dsMode_128KB_CACHE_SLOTS 0xDB
+#define dsMode_CACHE_ADRESS_SIZE 0x1B40000
+#define dsMode_128KB_CACHE_SLOTS 0xDA
+#define dsMode_128KB_CACHE_SLOTS_part1 0x5A
 #define dsiMode_CACHE_ADRESS_START 0x0D000000
 #define dsiMode_CACHE_ADRESS_SIZE 0x1000000
 #define dsiMode_128KB_CACHE_SLOTS 0x80
@@ -193,7 +194,12 @@ vu8* getCacheAddress(int slot) {
 	if(dsiMode) {
 		return (vu32*)(dsiMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
 	} else {
-		return (vu32*)(dsMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
+		if(slot >= dsMode_128KB_CACHE_SLOTS_part1) {
+			slot -= dsMode_128KB_CACHE_SLOTS_part1;
+			return (vu32*)(dsiMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
+		} else {
+			return (vu32*)(dsMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
+		}
 	}
 }
 
