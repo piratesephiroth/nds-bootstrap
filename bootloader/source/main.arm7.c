@@ -265,14 +265,14 @@ void loadBinary_ARM7 (aFile file)
 	char* ARM7_DST = (char*)ndsHeader[0x038>>2];
 	ARM7_LEN = ndsHeader[0x03C>>2];
 
-	/*u32 FAT_SRC = ndsHeader[0x048>>2];
+	u32 FAT_SRC = ndsHeader[0x048>>2];
 	u32 FAT_LEN = ndsHeader[0x04C>>2];
 	if(FAT_LEN > 0x8000) FAT_LEN = 0x8000;
 	
 	u32 fat[0x8000>>2];
 	// Load File Allocation Table into memory
 	fileRead((char*)fat, file, FAT_SRC, FAT_LEN);
-	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);*/
+	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);
 
 	ROM_TID = ndsHeader[0x00C>>2];
 	romSize = ndsHeader[0x080>>2];

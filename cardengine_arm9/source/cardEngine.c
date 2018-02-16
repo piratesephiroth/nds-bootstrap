@@ -61,7 +61,7 @@ static u32 SCFG_EXT_NORM = 0x83008000;
 //#define dsiMode_1MB_CACHE_SLOTS 0x10
 
 vu32* volatile cardStruct = 0x0C497BC0;
-//vu32* volatile fat = 0x0C808000;
+vu32* volatile fat = 0x0C488000;
 //extern vu32* volatile cacheStruct;
 extern u32 sdk_version;
 extern u32 needFlushDCCache;
@@ -117,7 +117,7 @@ void setExceptionHandler2() {
 int allocateCacheSlot() {
 	int slot = 0;
 	int lowerCounter = accessCounter;
-	if(dsiMode) {
+	//if(dsiMode) {
 		for(int i=0; i<dsiMode_128KB_CACHE_SLOTS; i++) {
 			if(cacheCounter[i]<=lowerCounter) {
 				lowerCounter = cacheCounter[i];
@@ -125,7 +125,7 @@ int allocateCacheSlot() {
 				if(!lowerCounter) return slot;
 			}
 		}
-	} else {
+	/*} else {
 		for(int i=0; i<dsMode_128KB_CACHE_SLOTS; i++) {
 			if(cacheCounter[i]<=lowerCounter) {
 				lowerCounter = cacheCounter[i];
@@ -133,7 +133,7 @@ int allocateCacheSlot() {
 				if(!lowerCounter) return slot;
 			}
 		}
-	}
+	}*/
 	return slot;
 }
 
@@ -160,19 +160,19 @@ int GAME_allocateCacheSlot() {
 }*/
 
 int getSlotForSector(u32 sector) {
-	if(dsiMode) {
+	//if(dsiMode) {
 		for(int i=0; i<dsiMode_128KB_CACHE_SLOTS; i++) {
 			if(cacheDescriptor[i]==sector) {
 				return i;
 			}
 		}
-	} else {
+	/*} else {
 		for(int i=0; i<dsMode_128KB_CACHE_SLOTS; i++) {
 			if(cacheDescriptor[i]==sector) {
 				return i;
 			}
 		}
-	}
+	}*/
 	return -1;
 }
 
@@ -191,16 +191,16 @@ int GAME_getSlotForSector(u32 sector) {
 }*/
 
 vu8* getCacheAddress(int slot) {
-	if(dsiMode) {
+	//if(dsiMode) {
 		return (vu32*)(dsiMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
-	} else {
+	/*} else {
 		if(slot >= dsMode_128KB_CACHE_SLOTS_part1) {
 			slot -= dsMode_128KB_CACHE_SLOTS_part1;
 			return (vu32*)(dsiMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
 		} else {
 			return (vu32*)(dsMode_CACHE_ADRESS_START+slot*CACHE_READ_SIZE);
 		}
-	}
+	}*/
 }
 
 vu8* GAME_getCacheAddress(int slot) {
@@ -221,7 +221,7 @@ void accessCounterIncrease() {
 	accessCounter++;
 }
 
-/* void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
+void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
 	bool isMobiclip = false;
 	
 	// Search for "MODSN3.."
@@ -265,7 +265,7 @@ void accessCounterIncrease() {
 
 			u32 commandRead;
 
-			commandRead = 0x026ff800;
+			commandRead = 0x025FFB08;
 
 			sharedAddr[0] = buffer+CACHE_READ_SIZE;
 			sharedAddr[1] = fileSize;
@@ -275,7 +275,7 @@ void accessCounterIncrease() {
 			while(sharedAddr[3] != (vu32)0);
 		}
 	}
-} */
+}
 
 int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 	//nocashMessage("\narm9 cardRead\n");
@@ -421,7 +421,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 					updateDescriptor(slot, sector);
 
-					//loadMobiclipVideo(src0, slot, buffer);
+					loadMobiclipVideo(src0, slot, buffer);
 				//}
 
 				u32 len2=len;
