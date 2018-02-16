@@ -226,7 +226,7 @@ void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
 	
 	// Search for "MODSN3.."
 	for(u32 i = 0; i < CACHE_READ_SIZE; i++) {
-		if(*(u32*)buffer+i == 0x4D4F4453 && *(u32*)buffer+i+4 == 0x4E330A00) {
+		if(*(u32*)buffer+i == 0x4D4F4453 && *(u32*)buffer+i+1 == 0x4E330A00) {
 			isMobiclip = true;	// It's a MobiClip video, so cache the full file
 			break;
 		}
@@ -257,15 +257,19 @@ void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
 		// Cache full MobiClip video into RAM
 		if(buffer+fileSize < 0x0E000000) {
 			i2 = 0;
+			int i3 = 0;
 			for(u32 i = src; i < endOfFile; i += CACHE_READ_SIZE) {
 				i2++;
 				accessCounterIncrease();
-				updateDescriptor(slot+i2, sector+CACHE_READ_SIZE*i2);
+				updateDescriptor(slot+i2, sector+(CACHE_READ_SIZE*i3));
+				i3++;
 			}
 
 			u32 commandRead;
 
-			commandRead = 0x025FFB08;
+			commandRead = 0x024FFB08;
+			
+			REG_SCFG_EXT = SCFG_EXT_CACHEACCESS;
 
 			sharedAddr[0] = buffer+CACHE_READ_SIZE;
 			sharedAddr[1] = fileSize;
@@ -273,6 +277,8 @@ void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
 			sharedAddr[3] = commandRead;
 
 			while(sharedAddr[3] != (vu32)0);
+
+			REG_SCFG_EXT = SCFG_EXT_NORM;
 		}
 	}
 }

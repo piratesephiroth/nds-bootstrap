@@ -186,7 +186,7 @@ void runCardEngineCheck (void) {
 	#ifdef DEBUG
 	nocashMessage("runCardEngineCheck");
 	#endif
-	
+
 	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_DOWN | KEY_B)) {
 		softResetTimer = 0;
 	} else {
@@ -212,6 +212,14 @@ void runCardEngineCheck (void) {
 		if(*(vu32*)(0x027FFB14) == (vu32)0x025FFB08)
 		{
 			cardRead_arm9();
+			*(vu32*)(0x027FFB14) = 0;
+		}
+
+		if(*(vu32*)(0x027FFB14) == (vu32)0x024FFB08)
+		{
+			memcpy((u32*)0x02000300,sr_data_srloader,0x020);
+			i2cWriteRegister(0x4a,0x70,0x01);
+			i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into SRLoader
 			*(vu32*)(0x027FFB14) = 0;
 		}
 		unlockMutex();
