@@ -221,7 +221,7 @@ void accessCounterIncrease() {
 	accessCounter++;
 }
 
-void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
+/*void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
 	bool isMobiclip = false;
 	
 	// Search for "MODSN3.."
@@ -281,7 +281,7 @@ void loadMobiclipVideo(u32 src, int slot, u32 buffer) {
 			REG_SCFG_EXT = SCFG_EXT_NORM;
 		}
 	}
-}
+}*/
 
 int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 	//nocashMessage("\narm9 cardRead\n");
@@ -427,7 +427,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 					updateDescriptor(slot, sector);
 
-					loadMobiclipVideo(src0, slot, buffer);
+					//loadMobiclipVideo(src0, slot, buffer);
 				//}
 
 				u32 len2=len;
