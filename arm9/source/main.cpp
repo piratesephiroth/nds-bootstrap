@@ -119,7 +119,7 @@ typedef struct {
 } sNDSHeadertitlecodeonly;
 
 void getSFCG_ARM9() {
-	iprintf( "SCFG_ROM ARM9 %x\n", REG_SCFG_ROM ); 
+	//iprintf( "SCFG_ROM ARM9 %x\n", REG_SCFG_ROM ); 
 	iprintf( "SCFG_CLK ARM9 %x\n", REG_SCFG_CLK ); 
 	iprintf( "SCFG_EXT ARM9 %x\n", REG_SCFG_EXT ); 
 }
@@ -152,14 +152,6 @@ void myFIFOValue32Handler(u32 value,void* data)
 }
 
 
-bool isMounted;
-
-void InitSD(){
-	fatUnmount("sd:/");
-	__io_dsisd.shutdown();
-	isMounted = fatMountSimple("sd", &__io_dsisd);  
-}
-
 void initMBK() {
 	// default dsiware settings
 	
@@ -179,55 +171,19 @@ void initMBK() {
 	REG_MBK8=0x07403700; // same as dsiware
 }
 
-bool consoleInited = false;
-
-int reinittimer = 0;
-bool run_reinittimer = true;
-//---------------------------------------------------------------------------------
-void VcountHandler() {
-//---------------------------------------------------------------------------------
-	if (run_reinittimer) {
-		reinittimer++;
-		if (reinittimer == 90) {
-			InitSD();	// Re-init SD if fatInit is looping
-		}
-		if (reinittimer == 180) {
-			if(!consoleInited) {
-				consoleDemoInit();
-				consoleInited = true;
-			}
-			consoleClear();
-			nocashMessage("fatInitDefault crashed!");
-			printf("fatInitDefault crashed!");
-			run_reinittimer = false;
-		}
-	}
-}
-
 int main( int argc, char **argv) {
-
-	irqSet(IRQ_VCOUNT, VcountHandler);
-
-	irqEnable( IRQ_VBLANK | IRQ_VCOUNT);
 
 	initMBK();
 
-	// switch to NTR mode
-	REG_SCFG_EXT = 0x83000000; // NAND/SD Access
-
-	InitSD();
-	if (isMounted) {
-		nocashMessage("isMounted");
+	if (fatInitDefault()) {
+		nocashMessage("fatInitDefault");
 		CIniFile bootstrapini( "sd:/_nds/nds-bootstrap.ini" );
 
 		if(bootstrapini.GetInt("NDS-BOOTSTRAP","DEBUG",0) == 1) {
 			debug=true;
 
-			if(!consoleInited) {
-				powerOff(PM_BACKLIGHT_TOP);
-				consoleDemoInit();
-				consoleInited = true;
-			}
+			powerOff(PM_BACKLIGHT_TOP);
+			consoleDemoInit();
 
 			dbg_printf("nds-bootstrap SDK5\n");
 
@@ -236,10 +192,6 @@ int main( int argc, char **argv) {
 			getSFCG_ARM9();
 			getSFCG_ARM7();
 		}
-
-		fatInitDefault();
-		nocashMessage("fatInitDefault");
-		reinittimer = 0;
 
 		int romread_LED = bootstrapini.GetInt("NDS-BOOTSTRAP","ROMREAD_LED",1);
 		switch(romread_LED) {
@@ -261,7 +213,6 @@ int main( int argc, char **argv) {
 		}
 
 		std::string	ndsPath = bootstrapini.GetString( "NDS-BOOTSTRAP", "NDS_PATH", "");
-		reinittimer = 0;
 
 		/*FILE *f_nds_file = fopen(ndsPath.c_str(), "rb");
 
@@ -280,7 +231,6 @@ int main( int argc, char **argv) {
 
 		bool run_timeout = bootstrapini.GetInt( "NDS-BOOTSTRAP", "CHECK_COMPATIBILITY", 1);
 		if (run_timeout) fifoSendValue32(FIFO_USER_04, 1);
-		reinittimer = 0;
 
 		if(bootstrapini.GetInt("NDS-BOOTSTRAP","BOOST_CPU",0) == 1) {
 			dbg_printf("CPU boosted\n");
@@ -289,8 +239,6 @@ int main( int argc, char **argv) {
 			REG_SCFG_CLK = 0x80;
 			fifoSendValue32(FIFO_USER_06, 1);
 		}
-		reinittimer = 0;
-		run_reinittimer = false;
 
 		fifoSendValue32(FIFO_USER_03, 1);
 		fifoWaitValue32(FIFO_USER_05);
@@ -317,18 +265,9 @@ int main( int argc, char **argv) {
 
 		u32	patchMpuSize = bootstrapini.GetInt( "NDS-BOOTSTRAP", "PATCH_MPU_SIZE", 0);
 
-		/* Can't seem to do it here for some reason. It hangs if I do. I have lock scfg code occuring in the boost_cpu check instead.
-		if(bootstrapini.GetInt("NDS-BOOTSTRAP","LOCK_ARM9_SCFG_EXT",0) == 1) {
-			dbg_printf("ARM9_SCFG_EXT locked\n");
-			REG_SCFG_EXT &= 0x7FFFFFFF; // Only lock bit 31
-			fifoSendValue32(FIFO_USER_08, 1);
-		}
-		*/
-
 		dbg_printf("Running %s\n", ndsPath.c_str());
 		runFile(ndsPath.c_str(), savPath.c_str(), bootstrapini.GetInt( "NDS-BOOTSTRAP", "DSI_MODE", 0), patchMpuRegion, patchMpuSize, bootstrapini.GetInt( "NDS-BOOTSTRAP", "LOADING_SCREEN", 1));	
 	} else {
-		run_reinittimer = false;
 		consoleDemoInit();
 		printf("SD init failed!\n");
 	}
