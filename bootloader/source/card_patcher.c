@@ -35,7 +35,9 @@ u32 moduleParamsSignature[2]   = {0xDEC00621, 0x2106C0DE};
 
 // sdk 5 version
 u32 a9cardReadSignature5[2]    = {0x04100010, 0x040001A4};
+u32 a9cardReadSignatureThumb5[2]    = {0x040001A4, 0x04100010};
 u32 cardReadStartSignature5[1] = {0xE92D4FF8};
+u32 cardReadStartSignatureThumb5[1] = {0x0A0AB4F0};
 
 u32 a9cardIdSignature[2]      = {0x04100010,0xE92D4038};
 u32 cardIdStartSignature[2]   = {0xE92D4010,0xE3A050B8};
@@ -70,6 +72,8 @@ u32 irqEnableStartSignature1[4] = {0xE59FC028,0xE1DC30B0,0xE3A01000,0xE1CC10B0};
 u32 irqEnableStartSignature4[4] = {0xE92D4010, 0xE1A04000, 0xEBFFFFF6, 0xE59FC020};
 
 //u32 arenaLowSignature[4] = {0xE1A00100,0xE2800627,0xE2800AFF,0xE5801DA0};  
+
+bool cardReadFound = false;
 
 //
 // Look in @data for @find and return the position of it.
@@ -176,12 +180,16 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	debug[8] = moduleParams->sdk_version;
 
 	u32* a9cardReadSignature = a9cardReadSignature5;
+	u32* a9cardReadSignatureThumb = a9cardReadSignatureThumb5;
 	u32* cardReadStartSignature = cardReadStartSignature5;
+	u32* cardReadStartSignatureThumb = cardReadStartSignatureThumb5;
 	u32* cardPullOutSignature = cardPullOutSignature5;
 	u32* cardReadCachedStartSignature = cardReadCachedStartSignature4;
 	u32* cardReadCachedEndSignature = cardReadCachedEndSignature4;
 
 	u32 needFlushCache = 0;
+
+	bool usesThumb = false;
 
 	// Find the card read
     u32 cardReadEndOffset =  
@@ -189,23 +197,43 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
               (u32*)a9cardReadSignature, 2, 1);
     if (!cardReadEndOffset) {
         dbg_printf("Card read end not found\n");
-        return 0;
+		//cardReadEndOffset =  
+		//	getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
+		//		(u32*)a9cardReadSignatureThumb, 2, 1);
+		//if (!cardReadEndOffset) {
+		//	dbg_printf("Thumb card read end not found\n");
+			return 0;
+		//} else {
+		//	usesThumb = true;
+		//}
     }
 	debug[1] = cardReadEndOffset;
-    u32 cardReadStartOffset =   
-        getOffset((u32*)cardReadEndOffset, -0x120,
-              (u32*)cardReadStartSignature, 1, -1);
-    if (!cardReadStartOffset) {
-        dbg_printf("Card read start not found\n");
-        return 0;
-    }
+    u32 cardReadStartOffset = 0;
+	if (usesThumb) {
+		cardReadStartOffset =   
+			getOffset((u32*)cardReadEndOffset, -0xF0,
+				  (u32*)cardReadStartSignatureThumb, 1, -1);
+		if (!cardReadStartOffset) {
+			dbg_printf("Card read start not found\n");
+			return 0;
+		}
+	} else {
+		cardReadStartOffset =   
+			getOffset((u32*)cardReadEndOffset, -0x120,
+				  (u32*)cardReadStartSignature, 1, -1);
+		if (!cardReadStartOffset) {
+			dbg_printf("Card read start not found\n");
+			return 0;
+		}
+	}
+	cardReadFound = true;
 	dbg_printf("Arm9 Card read:\t");
 	dbg_hexa(cardReadStartOffset);
 	dbg_printf("\n");
 
 	u32 cardPullOutOffset =   
-        getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//, ndsHeader->arm9binarySize,
-              (u32*)cardPullOutSignature, 4, 1);
+		getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//, ndsHeader->arm9binarySize,
+			(u32*)cardPullOutSignature, 4, 1);
     if (!cardPullOutOffset) {
         dbg_printf("Card pull out handler not found\n");
         //return 0;
@@ -351,7 +379,12 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	debug[2] = cardEngineLocation;
 
-	u32* patches =  (u32*) cardEngineLocation[0];
+	u32* patches = 0;
+	if (usesThumb) {
+		patches = (u32*) cardEngineLocation[1];
+	} else {
+		patches = (u32*) cardEngineLocation[0];
+	}
 
 	cardEngineLocation[3] = moduleParams->sdk_version;
 
@@ -365,7 +398,12 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	debug[5] = patches;
 
-	u32* card_struct = ((u32*)cardReadEndOffset) - 1;
+	u32* card_struct = 0;
+	if (usesThumb) {
+		card_struct = ((u32*)cardReadEndOffset) - 2;
+	} else {
+		card_struct = ((u32*)cardReadEndOffset) - 1;
+	}
 	//u32* cache_struct = ((u32*)cardIdStartOffset) - 1;
 
 	debug[6] = *card_struct;
@@ -383,12 +421,20 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	//copyLoop (oldArenaLow, cardReadPatch, 0xF0);
 
-	copyLoop ((u32*)cardReadStartOffset, cardReadPatch, 0xF0);
+	if (usesThumb) {
+		copyLoop ((u32*)cardReadStartOffset, cardReadPatch, 0x60);
+	} else {
+		copyLoop ((u32*)cardReadStartOffset, cardReadPatch, 0xF0);
+	}
 
 	copyLoop ((u32*)(cardPullOutOffset), cardPullOutPatch, 0x4);
 
 	if (cardIdStartOffset) {
-		copyLoop ((u32*)cardIdStartOffset, cardIdPatch, 0x8);
+		if (usesThumb) {
+			copyLoop ((u32*)cardIdStartOffset, cardIdPatch, 0x4);
+		} else {
+			copyLoop ((u32*)cardIdStartOffset, cardIdPatch, 0x8);
+		}
 	}
 
 	if (cardReadDmaOffset) {
@@ -396,7 +442,11 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 		dbg_hexa(cardReadDmaOffset);
 		dbg_printf("\n");
 
-		copyLoop ((u32*)cardReadDmaOffset, cardDmaPatch, 0x8);
+		if (usesThumb) {
+			copyLoop ((u32*)cardReadDmaOffset, cardDmaPatch, 0x4);
+		} else {
+			copyLoop ((u32*)cardReadDmaOffset, cardDmaPatch, 0x8);
+		}
 	}
 
 	dbg_printf("ERR_NONE");
@@ -1218,8 +1268,13 @@ u32 patchCardNds (const tNDSHeader* ndsHeader, u32* cardEngineLocationArm7, u32*
 	dbg_printf("patchCardNds");
 
 	patchCardNdsArm9(ndsHeader, cardEngineLocationArm9, moduleParams, patchMpuRegion, patchMpuSize);
-	patchCardNdsArm7(ndsHeader, cardEngineLocationArm7, moduleParams, saveFileCluster);
+	if (cardReadFound) {
+		patchCardNdsArm7(ndsHeader, cardEngineLocationArm7, moduleParams, saveFileCluster);
 
-	dbg_printf("ERR_NONE");
-	return 0;
+		dbg_printf("ERR_NONE");
+		return ERR_NONE;
+	} else {
+		dbg_printf("ERR_LOAD_OTHR");
+		return ERR_LOAD_OTHR;
+	}
 }

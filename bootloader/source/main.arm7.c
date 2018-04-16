@@ -246,6 +246,7 @@ u32 ROM_TID;
 u32 ROM_HEADERCRC;
 u32 ARM9_LEN;
 u32 ARM7_LEN;
+u32 fatSize;
 u32 romSize;
 
 void loadBinary_ARM7 (aFile file)
@@ -275,6 +276,7 @@ void loadBinary_ARM7 (aFile file)
 	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);
 
 	ROM_TID = ndsHeader[0x00C>>2];
+	fatSize = ndsHeader[0x04C>>2];
 	romSize = ndsHeader[0x080>>2];
 	ROM_HEADERCRC = ndsHeader[0x15C>>2];
 	
@@ -326,7 +328,7 @@ void loadRomIntoRam(aFile file) {
 	romSize -= 0x4000;
 	romSize -= ARM9_LEN;
 
-	/*if(dsiModeConfirmed && (romSize > 0) && (romSize <= 0x01000000)) {
+	/*if(dsiModeConfirmed && (fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
 		ROM_LOCATION = 0x0D000000;
 		ROMinRAM = 1;
 		arm9_extRAM = 2;
@@ -335,7 +337,7 @@ void loadRomIntoRam(aFile file) {
 		arm9_extRAM = 1;
 		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 	//} else if((romSize > 0) && (romSize <= 0x01B40000)) {
-	} else */ if((romSize > 0) && (romSize <= 0x01000000)) {
+	} else */ if((fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
 		ROMinRAM = 1;
 		arm9_extRAM = 2;
 		while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
@@ -567,6 +569,12 @@ void arm7_main (void) {
 		increaseLoadBarLength();	// 5 dots
 
 		errorCode = patchCardNds(NDS_HEAD,ENGINE_LOCATION_ARM7,ENGINE_LOCATION_ARM9,params,saveFileCluster, patchMpuRegion, patchMpuSize);
+		if(errorCode == ERR_NONE) {
+			nocashMessage("patch card Sucessfull");
+		} else {
+			nocashMessage("game uses thumb");
+			errorOutput();
+		}
 		increaseLoadBarLength();	// 6 dots
 
 		errorCode = hookNdsRetail(NDS_HEAD, file, (const u32*)CHEAT_DATA_LOCATION, (u32*)CHEAT_ENGINE_LOCATION, (u32*)ENGINE_LOCATION_ARM7);
