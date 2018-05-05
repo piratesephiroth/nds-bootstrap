@@ -36,6 +36,8 @@
 	.global patchMpuRegion
 	.global patchMpuSize
 	.global loadingScreen
+	.global romread_LED
+	.global gameSoftReset
 	.global dsiMode
 @---------------------------------------------------------------------------------
 	.align	4
@@ -69,6 +71,10 @@ patchMpuRegion:
 patchMpuSize:
 	.word	0x00000000
 loadingScreen:
+	.word	0x00000000
+romread_LED:
+	.word	0x00000000
+gameSoftReset:
 	.word	0x00000000
 
 startUp:

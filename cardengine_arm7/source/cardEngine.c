@@ -26,6 +26,8 @@
 
 #include "sr_data_error.h"	// For showing an error screen
 #include "sr_data_srloader.h"	// For rebooting into SRLoader
+#include "sr_data_twlnandside.h"	// For rebooting the game (NTR-mode touch screen)
+#include "sr_data_twlnandside_twltouch.h"	// For rebooting the game (TWL-mode touch screen)
 
 extern void* memcpy(const void * src0, void * dst0, int len0);	// Fixes implicit declaration @ line 126 & 136
 extern int tryLockMutex(void);					// Fixes implicit declaration @ line 145
@@ -39,9 +41,14 @@ extern vu32* volatile cacheStruct;
 extern u32 fileCluster;
 extern u32 saveCluster;
 extern u32 sdk_version;
+extern u32 dsiMode;
+extern u32 romread_LED;
+extern u32 gameSoftReset;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
 static aFile romFile;
 static aFile savFile;
+
+static bool saveInProgress = false;
 
 static int softResetTimer = 0;
 
@@ -80,35 +87,33 @@ void initLogging() {
 }
 
 void cardReadLED (bool on) {
-	u8 setting = i2cReadRegister(0x4A, 0x72);
-	
 	if(on) {
-		switch(setting) {
-			case 0x00:
+		switch(romread_LED) {
+			case 0:
 			default:
 				break;
-			case 0x01:
+			case 1:
 				i2cWriteRegister(0x4A, 0x30, 0x13);    // Turn WiFi LED on
 				break;
-			case 0x02:
+			case 2:
 				i2cWriteRegister(0x4A, 0x63, 0xFF);    // Turn power LED purple
 				break;
-			case 0x03:
+			case 3:
 				i2cWriteRegister(0x4A, 0x31, 0x01);    // Turn Camera LED on
 				break;
 		}
 	} else {
-		switch(setting) {
-			case 0x00:
+		switch(romread_LED) {
+			case 0:
 			default:
 				break;
-			case 0x01:
+			case 1:
 				i2cWriteRegister(0x4A, 0x30, 0x12);    // Turn WiFi LED off
 				break;
-			case 0x02:
+			case 2:
 				i2cWriteRegister(0x4A, 0x63, 0x00);    // Revert power LED to normal
 				break;
-			case 0x03:
+			case 3:
 				i2cWriteRegister(0x4A, 0x31, 0x00);    // Turn Camera LED off
 				break;
 		}
@@ -187,17 +192,6 @@ void runCardEngineCheck (void) {
 	nocashMessage("runCardEngineCheck");
 	#endif
 
-	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_DOWN | KEY_B)) {
-		softResetTimer = 0;
-	} else {
-		if(softResetTimer == 60*2) {
-			memcpy((u32*)0x02000300,sr_data_srloader,0x020);
-			i2cWriteRegister(0x4a,0x70,0x01);
-			i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into SRLoader
-		}
-		softResetTimer++;
-	}
-
 	if(tryLockMutex()) {
 		initLogging();
 
@@ -215,13 +209,13 @@ void runCardEngineCheck (void) {
 			*(vu32*)(0x027FFB14) = 0;
 		}
 
-		if(*(vu32*)(0x027FFB14) == (vu32)0x024FFB08)
+		/*if(*(vu32*)(0x027FFB14) == (vu32)0x024FFB08)
 		{
 			memcpy((u32*)0x02000300,sr_data_srloader,0x020);
 			i2cWriteRegister(0x4a,0x70,0x01);
 			i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into SRLoader
 			*(vu32*)(0x027FFB14) = 0;
-		}
+		}*/
 		unlockMutex();
 	}
 }
@@ -246,6 +240,28 @@ void myIrqHandlerVBlank(void) {
 	
 	calledViaIPC = false;
 	
+	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_DOWN | KEY_B)) {
+		softResetTimer = 0;
+	} else {
+		if(softResetTimer == 60*2) {
+			memcpy((u32*)0x02000300,sr_data_srloader,0x020);
+			i2cWriteRegister(0x4a,0x70,0x01);
+			i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into SRLoader
+		}
+		softResetTimer++;
+	}
+
+	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_START | KEY_SELECT)) {
+	} else if (!saveInProgress && !gameSoftReset) {
+		if (dsiMode) {
+			memcpy((u32*)0x02000300,sr_data_twlnandside_twltouch,0x020);
+		} else {
+			memcpy((u32*)0x02000300,sr_data_twlnandside,0x020);
+		}
+		i2cWriteRegister(0x4a,0x70,0x01);
+		i2cWriteRegister(0x4a,0x11,0x01);	// Reboot game
+	}
+
 	runCardEngineCheck();
 }
 
@@ -288,14 +304,14 @@ bool eepromProtect (void) {
 	#ifdef DEBUG		
 	dbg_printf("\narm7 eepromProtect\n");
 	#endif	
-	
+
 	return true;
 }
 
 bool eepromRead (u32 src, void *dst, u32 len) {
 	#ifdef DEBUG	
 	dbg_printf("\narm7 eepromRead\n");	
-	
+
 	dbg_printf("\nsrc : \n");
 	dbg_hexa(src);		
 	dbg_printf("\ndst : \n");
@@ -303,16 +319,16 @@ bool eepromRead (u32 src, void *dst, u32 len) {
 	dbg_printf("\nlen : \n");
 	dbg_hexa(len);
 	#endif	
-	
+
 	fileRead(dst,savFile,src,len);
-	
+
 	return true;
 }
 
 bool eepromPageWrite (u32 dst, const void *src, u32 len) {
 	#ifdef DEBUG	
 	dbg_printf("\narm7 eepromPageWrite\n");	
-	
+
 	dbg_printf("\nsrc : \n");
 	dbg_hexa((u32)src);		
 	dbg_printf("\ndst : \n");
@@ -321,17 +337,19 @@ bool eepromPageWrite (u32 dst, const void *src, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
+	saveInProgress = true;
 	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
 	fileWrite(src,savFile,dst,len);
 	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
-	
+	saveInProgress = false;
+
 	return true;
 }
 
 bool eepromPageProg (u32 dst, const void *src, u32 len) {
 	#ifdef DEBUG	
 	dbg_printf("\narm7 eepromPageProg\n");	
-	
+
 	dbg_printf("\nsrc : \n");
 	dbg_hexa((u32)src);		
 	dbg_printf("\ndst : \n");
@@ -340,17 +358,19 @@ bool eepromPageProg (u32 dst, const void *src, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
+	saveInProgress = true;
 	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
 	fileWrite(src,savFile,dst,len);
 	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
-	
+	saveInProgress = false;
+
 	return true;
 }
 
 bool eepromPageVerify (u32 dst, const void *src, u32 len) {
 	#ifdef DEBUG	
 	dbg_printf("\narm7 eepromPageVerify\n");	
-	
+
 	dbg_printf("\nsrc : \n");
 	dbg_hexa((u32)src);		
 	dbg_printf("\ndst : \n");
@@ -369,7 +389,7 @@ bool eepromPageErase (u32 dst) {
 	#ifdef DEBUG	
 	dbg_printf("\narm7 eepromPageErase\n");	
 	#endif	
-	
+
 	return true;
 }
 
@@ -384,7 +404,7 @@ u32 cardId (void) {
 bool cardRead (u32 dma,  u32 src, void *dst, u32 len) {
 	#ifdef DEBUG	
 	dbg_printf("\narm7 cardRead\n");	
-	
+
 	dbg_printf("\ndma : \n");
 	dbg_hexa(dma);		
 	dbg_printf("\nsrc : \n");
@@ -394,13 +414,13 @@ bool cardRead (u32 dma,  u32 src, void *dst, u32 len) {
 	dbg_printf("\nlen : \n");
 	dbg_hexa(len);
 	#endif	
-	
+
 	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
 	//ndmaUsed = false;
 	fileRead(dst,romFile,src,len);
 	//ndmaUsed = true;
 	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
-	
+
 	return true;
 }
 

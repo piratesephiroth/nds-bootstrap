@@ -67,6 +67,8 @@ dsiSD:
 #define PUR_OFFSET 40
 #define PUS_OFFSET 44
 #define LOADSCR_OFFSET 48
+#define ROMREADLED_OFFSET 52
+#define GAMESOFTRESET_OFFSET 56
 
 typedef signed int addr_t;
 typedef unsigned char data_t;
@@ -266,7 +268,7 @@ static bool dldiPatchLoader (data_t *binData, u32 binSize, bool clearBSS)
 	return true;
 }
 
-int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 loadingScreen, bool initDisc, bool dldiPatchNds, int argc, const char** argv)
+int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 loadingScreen, u32 romread_LED, u32 gameSoftReset, bool initDisc, bool dldiPatchNds, int argc, const char** argv)
 {
 	char* argStart;
 	u16* argData;
@@ -331,6 +333,8 @@ int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u3
 	writeAddr ((data_t*) LCDC_BANK_C, PUR_OFFSET, patchMpuRegion);
 	writeAddr ((data_t*) LCDC_BANK_C, PUS_OFFSET, patchMpuSize);
 	writeAddr ((data_t*) LCDC_BANK_C, LOADSCR_OFFSET, loadingScreen);
+	writeAddr ((data_t*) LCDC_BANK_C, ROMREADLED_OFFSET, romread_LED);
+	writeAddr ((data_t*) LCDC_BANK_C, GAMESOFTRESET_OFFSET, gameSoftReset);
 		
 	if(dldiPatchNds) {
 		// Patch the loader with a DLDI for the card
@@ -368,7 +372,7 @@ int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u3
 	return true;
 }
 
-int runNdsFile (const char* filename, const char* savename, int dsiMode, int patchMpuRegion, int patchMpuSize, int loadingScreen, int argc, const char** argv)  {
+int runNdsFile (const char* filename, const char* savename, int dsiMode, int patchMpuRegion, int patchMpuSize, int loadingScreen, int romread_LED, int gameSoftReset, int argc, const char** argv)  {
 	struct stat st;
 	struct stat stSav;
 	struct stat stDonor;
@@ -401,6 +405,6 @@ int runNdsFile (const char* filename, const char* savename, int dsiMode, int pat
 
 	if(argv[0][0]=='s' && argv[0][1]=='d') havedsiSD = true;
 
-	return runNds (load_bin, load_bin_size, st.st_ino, clusterSav, dsiMode, patchMpuRegion, patchMpuSize, loadingScreen, true, true, argc, argv);
+	return runNds (load_bin, load_bin_size, st.st_ino, clusterSav, dsiMode, patchMpuRegion, patchMpuSize, loadingScreen, romread_LED, gameSoftReset, true, true, argc, argv);
 }
 
