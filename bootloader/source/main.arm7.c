@@ -159,30 +159,6 @@ void boot_readFirmware (uint32 address, uint8 * buffer, uint32 size) {
 
 //#define resetCpu() __asm volatile("\tswi 0x000000\n");
 
-/*-------------------------------------------------------------------------
-passArgs_ARM7
-Copies the command line arguments to the end of the ARM9 binary, 
-then sets a flag in memory for the loaded NDS to use
---------------------------------------------------------------------------*/
-void passArgs_ARM7 (void) {
-	u32 ARM9_DST = *((u32*)(NDS_HEAD + 0x028));
-	u32 ARM9_LEN = *((u32*)(NDS_HEAD + 0x02C));
-	u32* argSrc;
-	u32* argDst;
-
-	if (!argStart || !argSize) return;
-
-	argSrc = (u32*)(argStart + (int)&_start);
-
-	argDst = (u32*)((ARM9_DST + ARM9_LEN + 3) & ~3);		// Word aligned 
-
-	copyLoop(argDst, argSrc, argSize);
-
-	__system_argv->argvMagic = ARGV_MAGIC;
-	__system_argv->commandLine = (char*)argDst;
-	__system_argv->length = argSize;
-}
-
 
 
 
@@ -522,62 +498,38 @@ void arm7_main (void) {
 	loadBinary_ARM7(file);
 	increaseLoadBarLength();	// 2 dots
 
-	//wantToPatchDLDI = wantToPatchDLDI && ((u32*)NDS_HEAD)[0x084] > 0x200;
+	nocashMessage("try to patch card");
+	copyLoop (ENGINE_LOCATION_ARM7, (u32*)cardengine_arm7_bin, cardengine_arm7_bin_size);
+	increaseLoadBarLength();	// 3 dots
+	copyLoop (ENGINE_LOCATION_ARM9, (u32*)cardengine_arm9_bin, cardengine_arm9_bin_size);
+	increaseLoadBarLength();	// 4 dots
 
-	/* nocashMessage("try to patch dldi");
-	wantToPatchDLDI = dldiPatchBinary ((u8*)((u32*)NDS_HEAD)[0x0A], ((u32*)NDS_HEAD)[0x0B]);
-	if (wantToPatchDLDI) {
-		nocashMessage("dldi patch successful");
+	module_params_t* params = findModuleParams(NDS_HEAD);
+	if(params)
+	{
+		ensureArm9Decompressed(NDS_HEAD, params);
+	}
+	increaseLoadBarLength();	// 5 dots
 
-		// Find the DLDI reserved space in the file
-		u32 patchOffset = quickFind ((u8*)((u32*)NDS_HEAD)[0x0A], dldiMagicString, ((u32*)NDS_HEAD)[0x0B], sizeof(dldiMagicString));
-		u32* wordCommandAddr = (u32 *) (((u32)((u32*)NDS_HEAD)[0x0A])+patchOffset+0x80);
-
-		errorCode = hookNdsHomebrew(NDS_HEAD, (const u32*)CHEAT_DATA_LOCATION, (u32*)CHEAT_ENGINE_LOCATION, (u32*)ENGINE_LOCATION_ARM7, wordCommandAddr);
-		if(errorCode == ERR_NONE) {
-			nocashMessage("dldi hook Sucessfull");
-		} else {
-			nocashMessage("error during dldi hook");
-			errorOutput();
-		}
+	errorCode = patchCardNds(NDS_HEAD,ENGINE_LOCATION_ARM7,ENGINE_LOCATION_ARM9,params,saveFileCluster, patchMpuRegion, patchMpuSize);
+	if(errorCode == ERR_NONE) {
+		nocashMessage("patch card Sucessfull");
 	} else {
-		nocashMessage("dldi Patch Unsuccessful try to patch card"); */
-		nocashMessage("try to patch card");
-		copyLoop (ENGINE_LOCATION_ARM7, (u32*)cardengine_arm7_bin, cardengine_arm7_bin_size);
-		increaseLoadBarLength();	// 3 dots
-		copyLoop (ENGINE_LOCATION_ARM9, (u32*)cardengine_arm9_bin, cardengine_arm9_bin_size);
-		increaseLoadBarLength();	// 4 dots
+		nocashMessage("game uses thumb");
+		errorOutput();
+	}
+	increaseLoadBarLength();	// 6 dots
 
-		module_params_t* params = findModuleParams(NDS_HEAD);
-		if(params)
-		{
-			ensureArm9Decompressed(NDS_HEAD, params);
-		}
-		increaseLoadBarLength();	// 5 dots
-
-		errorCode = patchCardNds(NDS_HEAD,ENGINE_LOCATION_ARM7,ENGINE_LOCATION_ARM9,params,saveFileCluster, patchMpuRegion, patchMpuSize);
-		if(errorCode == ERR_NONE) {
-			nocashMessage("patch card Sucessfull");
-		} else {
-			nocashMessage("game uses thumb");
-			errorOutput();
-		}
-		increaseLoadBarLength();	// 6 dots
-
-		errorCode = hookNdsRetail(NDS_HEAD, file, (const u32*)CHEAT_DATA_LOCATION, (u32*)CHEAT_ENGINE_LOCATION, (u32*)ENGINE_LOCATION_ARM7);
-		if(errorCode == ERR_NONE) {
-			nocashMessage("card hook Sucessfull");
-		} else {
-			nocashMessage("error during card hook");
-			errorOutput();
-		}
-		increaseLoadBarLength();	// 7 dots
-	// }
+	errorCode = hookNdsRetail(NDS_HEAD, file, (const u32*)CHEAT_DATA_LOCATION, (u32*)CHEAT_ENGINE_LOCATION, (u32*)ENGINE_LOCATION_ARM7);
+	if(errorCode == ERR_NONE) {
+		nocashMessage("card hook Sucessfull");
+	} else {
+		nocashMessage("error during card hook");
+		errorOutput();
+	}
+	increaseLoadBarLength();	// 7 dots
  
 
-
-	// Pass command line arguments to loaded program
-	//passArgs_ARM7();
 
 	loadRomIntoRam(file);
 

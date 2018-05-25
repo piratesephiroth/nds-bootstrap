@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <nds/system.h>
 #include "card_patcher.h"
 #include "common.h"
 #include "cardengine_arm9_bin.h"
@@ -29,6 +30,9 @@ u32 a7something1Signature[2]   = {0xE350000C,0x908FF100};
 u32 a7something2Signature[2]   = {0x0000A040,0x040001A0};
 
 u32 a7JumpTableSignature[4] = {0xE5950024,0xE3500000,0x13A00001,0x03A00000};
+
+u32 swi12Signature[1] = {0x4770DF12};	// LZ77UnCompReadByCallbackWrite16bit
+u32 swiGetPitchTableSignature5[4] = {0x781A4B06, 0xD3030791, 0xD20106D1, 0x1A404904};
 
 // Subroutine function signatures arm9
 u32 moduleParamsSignature[2]   = {0xDEC00621, 0x2106C0DE};
@@ -175,7 +179,7 @@ void ensureArm9Decompressed(const tNDSHeader* ndsHeader, module_params_t* module
 
 u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 patchMpuRegion, u32 patchMpuSize) {
 
-	u32* debug = (u32*)0x03786000;
+	u32* debug = (u32*)0x037C6000;
 	debug[4] = ndsHeader->arm9destination;
 	debug[8] = moduleParams->sdk_version;
 
@@ -455,7 +459,7 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 /*u32 patchCardNdsArm9Overlay (u32* overlayLocation, u32 overlayLocationSize, u32* cardEngineLocation, module_params_t* moduleParams, u32 patchMpuRegion, u32 patchMpuSize) {
 
-	u32* debug = (u32*)0x03786000;
+	u32* debug = (u32*)0x037C6000;
 	debug[4] = overlayLocation;
 	debug[8] = moduleParams->sdk_version;
 
@@ -1208,7 +1212,34 @@ void swapBinary_ARM7(aFile donorfile)
 }
 
 u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster) {
-	u32* debug = (u32*)0x03786000;
+	u32* debug = (u32*)0x037C6000;
+
+	u32* patches =  (u32*) cardEngineLocation[0];
+
+	if(REG_SCFG_ROM != 0x703) {
+		u32 swi12Offset =   
+			getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm7binarySize,
+				  (u32*)swi12Signature, 1, 1);
+		if (!swi12Offset) {
+			dbg_printf("swi 0x12 call not found\n");
+		} else {
+			// Patch to call swi 0x02 instead of 0x12
+			dbg_printf("swi 0x12 call found\n");
+			u32* swi12Patch = (u32*) patches[10];
+			copyLoop ((u32*)swi12Offset, swi12Patch, 0x4);
+		}
+
+		u32 swiGetPitchTableOffset =   
+			getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
+				  (u32*)swiGetPitchTableSignature5, 4, 1);
+		if (!swiGetPitchTableOffset) {
+			dbg_printf("swiGetPitchTable call not found\n");
+		} else {
+			u32* swiGetPitchTablePatch = (u32*) patches[11];
+			copyLoop ((u32*)swiGetPitchTableOffset, swiGetPitchTablePatch, 0xC);
+			dbg_printf("swiGetPitchTable call found\n");
+		}
+	}
 
 	u32* irqEnableStartSignature = irqEnableStartSignature1;
 	u32* cardCheckPullOutSignature = cardCheckPullOutSignature1;
@@ -1241,7 +1272,6 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	cardEngineLocation[3] = moduleParams->sdk_version;
 
-	u32* patches =  (u32*) cardEngineLocation[0];
 	u32* cardIrqEnablePatch = (u32*) patches[2];
 	u32* cardCheckPullOutPatch = (u32*) patches[1];
 
