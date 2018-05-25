@@ -69,6 +69,26 @@ External functions
 --------------------------------------------------------------------------*/
 extern void arm9_clearCache (void);
 
+
+void initMBKARM9() {
+	// default dsiware settings
+	
+	// WRAM-B fully mapped to arm7 // inverted order
+	*((vu32*)REG_MBK2)=0x9195999D;
+	*((vu32*)REG_MBK3)=0x8185898D;
+	
+	// WRAM-C fully mapped to arm7 // inverted order
+	*((vu32*)REG_MBK4)=0x9195999D;
+	*((vu32*)REG_MBK5)=0x8185898D;
+		
+	// WRAM-A not mapped (reserved to arm7)
+	REG_MBK6=0x00000000;
+	// WRAM-B mapped to the 0x3740000 - 0x37BFFFF area : 512k // why? only 256k real memory is there
+	REG_MBK7=0x07C03740; // same as dsiware
+	// WRAM-C mapped to the 0x3700000 - 0x373FFFF area : 256k
+	REG_MBK8=0x07403700; // same as dsiware
+}
+
 /*-------------------------------------------------------------------------
 arm9_errorOutput
 Displays an error code on screen.
@@ -1183,6 +1203,8 @@ void arm9_main (void)
 	WRAM_CR = 0x03;
 	REG_EXMEMCNT = 0xE880;
 
+  initMBKARM9();
+
 	arm9_stateFlag = ARM9_START;
 
 	REG_IME = 0;
@@ -1263,13 +1285,7 @@ void arm9_main (void)
 	// set ARM9 state to ready and wait for it to change again
 	arm9_stateFlag = ARM9_READY;
 	while ( arm9_stateFlag != ARM9_BOOTBIN ) {
-		if(arm9_extRAM==2) {
-			REG_SCFG_EXT = 0x8300C000;
-		} else if(arm9_extRAM==1) {
-			REG_SCFG_EXT = 0x83008000;
-		} else {
-			REG_SCFG_EXT = 0x83000000;
-		}
+		REG_SCFG_EXT = 0x8300C000;
 		*(u32*)(0x23ffc40) = 01;
 		*(u32*)(0x2fffc40) = 01;
 		arm9_SCFG_EXT = REG_SCFG_EXT;
@@ -1291,6 +1307,8 @@ void arm9_main (void)
 			}
 		}
 	}
+
+
 
 	REG_IME=0;
 	REG_EXMEMCNT = 0xE880;

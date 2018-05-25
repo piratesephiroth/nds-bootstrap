@@ -334,19 +334,11 @@ void loadRomIntoRam(aFile file) {
 	/*if(dsiModeConfirmed && (fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
 		ROM_LOCATION = 0x0D000000;
 		ROMinRAM = 1;
-		arm9_extRAM = 2;
-		while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
-		arm9_extRAM = 1;
-		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 	//} else if((romSize > 0) && (romSize <= 0x01B40000)) {
 	} else */ if((fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
 		ROMinRAM = 1;
-		arm9_extRAM = 2;
-		while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
-		arm9_extRAM = 1;
-		while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 	} else {
 		if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
 			for(int i = 0; i < 3; i++)
@@ -364,8 +356,6 @@ void loadRomIntoRam(aFile file) {
 		if(setDataBWlist[0] != 0 && setDataBWlist[1] != 0 && setDataBWlist[2] != 0){
 			ROMinRAM = 2;
 			if(setDataBWlist[3] == 1) {
-				arm9_extRAM = 2;
-				while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 				fileRead(ROM_LOCATION, file, setDataBWlist[0], setDataBWlist[2]);
 				if(dataAmount >= 1) {
 					fileRead(ROM_LOCATION+setDataBWlist[2], file, setDataBWlist_1[0], setDataBWlist_1[2]);
@@ -373,21 +363,15 @@ void loadRomIntoRam(aFile file) {
 				if(dataAmount == 2) {
 					fileRead(ROM_LOCATION+setDataBWlist[2]+setDataBWlist_1[2], file, setDataBWlist_2[0], setDataBWlist_2[2]);
 				}
-				arm9_extRAM = 1;
-				while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 			} else if(setDataBWlist[3] == 0) {
 				setDataBWlist[0] -= 0x4000;
 				setDataBWlist[0] -= ARM9_LEN;
-				arm9_extRAM = 2;
-				while (arm9_SCFG_EXT != 0x8300C000);	// Wait for arm9
 				fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, setDataBWlist[0]);
 				u32 lastRomSize = 0;
 				for(u32 i = setDataBWlist[1]; i < romSize; i++) {
 					lastRomSize++;
 				}
 				fileRead(ROM_LOCATION+setDataBWlist[0], file, setDataBWlist[1], lastRomSize);
-				arm9_extRAM = 1;
-				while (arm9_SCFG_EXT != 0x83008000);	// Wait for arm9
 			}
 		}
 	}
