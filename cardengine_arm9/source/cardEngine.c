@@ -63,6 +63,13 @@ static u32 accessCounter = 0;
 
 static u32 CACHE_READ_SIZE = _128KB_READ_SIZE;
 
+static u32 asyncSector = 0xFFFFFFFF;
+static u32 asyncQueue [5];
+static int aQHead = 0;
+static int aQTail = 0;
+static int aQSize = 0;
+static char hexbuffer [9];
+
 static bool flagsSet = false;
 extern u32 ROMinRAM;
 static int use16MB = 0;
@@ -76,6 +83,31 @@ extern u32 setDataBWlist_3[3];
 extern u32 setDataBWlist_4[3];
 int dataAmount = 0;
 
+char* tohex(u32 n)
+{
+    unsigned size = 9;
+    char *buffer = hexbuffer;
+    unsigned index = size - 2;
+
+	for (int i=0; i<size; i++) {
+		buffer[i] = '0';
+	}
+	
+    while (n > 0)
+    {
+        unsigned mod = n % 16;
+
+        if (mod >= 10)
+            buffer[index--] = (mod - 10) + 'A';
+        else
+            buffer[index--] = mod + '0';
+
+        n /= 16;
+    }
+    buffer[size - 1] = '\0';
+    return buffer;
+}
+
 void user_exception(void);
 
 //---------------------------------------------------------------------------------
@@ -88,7 +120,7 @@ void setExceptionHandler2() {
 
 int allocateCacheSlot() {
 	int slot = 0;
-	int lowerCounter = accessCounter;
+	u32 lowerCounter = accessCounter;
 	//if(dsiMode) {
 		for(int i=0; i<dsiMode_128KB_CACHE_SLOTS; i++) {
 			if(cacheCounter[i]<=lowerCounter) {
@@ -111,7 +143,7 @@ int allocateCacheSlot() {
 
 int GAME_allocateCacheSlot() {
 	int slot = 0;
-	int lowerCounter = accessCounter;
+	u32 lowerCounter = accessCounter;
 	for(int i=0; i<setDataBWlist[5]; i++) {
 		if(cacheCounter[i]<=lowerCounter) {
 			lowerCounter = cacheCounter[i];
@@ -171,6 +203,124 @@ void updateDescriptor(int slot, u32 sector) {
 	cacheCounter[slot] = accessCounter;
 }
 
+void waitForArm7() {
+	while(sharedAddr[3] != (vu32)0);
+}
+
+void addToAsyncQueue(sector) {
+	#ifdef DEBUG
+	nocashMessage("\narm9 addToAsyncQueue\n");	
+	nocashMessage("\narm9 sector\n");	
+	nocashMessage(tohex(sector));
+	#endif
+	
+	asyncQueue[aQHead] = sector;
+	aQHead++;
+	aQSize++;
+	if(aQHead>4) {
+		aQHead=0;
+	}
+	if(aQSize>5) {
+		aQSize=5;
+		aQTail++;
+		if(aQTail>4) aQTail=0;
+	}
+}
+
+u32 popFromAsyncQueueHead() {	
+	if(aQSize>0) {
+	
+		aQHead--;
+		if(aQHead == -1) aQHead = 4;
+		aQSize--;
+		
+		return asyncQueue[aQHead];
+	} else return 0;
+}
+
+void triggerAsyncPrefetch(sector) {	
+	#ifdef DEBUG
+	nocashMessage("\narm9 triggerAsyncPrefetch\n");	
+	nocashMessage("\narm9 sector\n");	
+	nocashMessage(tohex(sector));
+	nocashMessage("\narm9 asyncSector\n");	
+	nocashMessage(tohex(asyncSector));
+	#endif
+	
+	if(asyncSector == 0xFFFFFFFF) {
+		int slot = getSlotForSector(sector);
+		// read max 32k via the WRAM cache
+		// do it only if there is no async command ongoing
+		if(slot==-1) {
+			addToAsyncQueue(sector);
+			// send a command to the arm7 to fill the WRAM cache
+			u32 commandRead = 0x020ff800;		
+
+			slot = allocateCacheSlot();
+			vu8* buffer = getCacheAddress(slot);
+
+			if(needFlushDCCache) DC_FlushRange(buffer, CACHE_READ_SIZE);
+
+			cacheDescriptor[slot] = sector;
+			cacheCounter[slot] = 0x0FFFFFFF ; // async marker
+			asyncSector = sector;		
+
+			// write the command
+			sharedAddr[0] = buffer;
+			sharedAddr[1] = CACHE_READ_SIZE;
+			sharedAddr[2] = sector;
+			sharedAddr[3] = commandRead;
+
+			IPC_SendSync(0xEE24);			
+
+
+			// do it asynchronously
+			/*while(sharedAddr[3] != (vu32)0);	
+
+			// transfer back the WRAM-B cache to the arm9
+			//transfertToArm9(tempSlot);*/
+		}
+	}
+}
+
+void processAsyncCommand() {
+	#ifdef DEBUG
+	nocashMessage("\narm9 processAsyncCommand\n");	
+	nocashMessage("\narm9 asyncSector\n");	
+	nocashMessage(tohex(asyncSector));
+	#endif
+	
+	if(asyncSector != 0xFFFFFFFF) {
+		int slot = getSlotForSector(asyncSector);
+		if(slot!=-1 && cacheCounter[slot] == 0x0FFFFFFF) {
+			// get back the data from arm7
+			if(sharedAddr[3] == (vu32)0) {
+				updateDescriptor(slot, asyncSector);
+				asyncSector = 0xFFFFFFFF;
+			}			
+		}	
+	}
+}
+
+void getAsyncSector() {
+	#ifdef DEBUG
+	nocashMessage("\narm9 getAsyncSector\n");	
+	nocashMessage("\narm9 asyncSector\n");	
+	nocashMessage(tohex(asyncSector));
+	#endif
+	
+	if(asyncSector != 0xFFFFFFFF) {
+		int slot = getSlotForSector(asyncSector);
+		if(slot!=-1 && cacheCounter[slot] == 0x0FFFFFFF) {
+			// get back the data from arm7
+			while(sharedAddr[3] != (vu32)0);
+
+			updateDescriptor(slot, asyncSector);
+			asyncSector = 0xFFFFFFFF;
+		}	
+	}	
+}
+
 int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 	//nocashMessage("\narm9 cardRead\n");
 
@@ -207,6 +357,8 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 		flagsSet = true;
 	}
 
+	u32 sector = (src/CACHE_READ_SIZE)*CACHE_READ_SIZE;
+
 	#ifdef DEBUG
 	// send a log command for debug purpose
 	// -------------------------------------
@@ -219,21 +371,19 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 	IPC_SendSync(0xEE24);
 
-	while(sharedAddr[3] != (vu32)0);
+	waitForArm7();
 	// -------------------------------------*/
 	#endif
 	
-	
-	CACHE_READ_SIZE = _128KB_READ_SIZE;
 
 	if(ROMinRAM==0) {
 		accessCounter++;
-	}
 
-	u32 sector = (src/CACHE_READ_SIZE)*CACHE_READ_SIZE;
+		processAsyncCommand();
 
-	if(ROMinRAM==0) {
 		if (page == src && len > CACHE_READ_SIZE && dst < 0x02700000 && dst > 0x02000000 && ((u32)dst)%4==0) {
+			getAsyncSector();
+
 			// read directly at arm7 level
 			commandRead = 0x025FFB08;
 
@@ -246,14 +396,18 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 			IPC_SendSync(0xEE24);
 
-			while(sharedAddr[3] != (vu32)0);
+			waitForArm7();
+
 		} else {
 			// read via the main RAM/DSi WRAM cache
 			while(len > 0) {
 				int slot = getSlotForSector(sector);
 				vu8* buffer = getCacheAddress(slot);
+				u32 nextSector = sector+CACHE_READ_SIZE;
 				// read max CACHE_READ_SIZE via the main RAM cache
 				if(slot==-1) {
+					getAsyncSector();
+
 					// send a command to the arm7 to fill the RAM cache
 					commandRead = 0x025FFB08;
 
@@ -271,10 +425,29 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 					IPC_SendSync(0xEE24);
 
-					while(sharedAddr[3] != (vu32)0);
-				}
+					waitForArm7();
 
-				updateDescriptor(slot, sector);
+					updateDescriptor(slot, sector);	
+		
+					triggerAsyncPrefetch(nextSector);
+				} else {
+					if(cacheCounter[slot] == 0x0FFFFFFF) {
+						// prefetch successfull
+						getAsyncSector();
+						
+						triggerAsyncPrefetch(nextSector);	
+					} else {
+						int i;
+						for(i=0; i<5; i++) {
+							if(asyncQueue[i]==sector) {
+								// prefetch successfull
+								triggerAsyncPrefetch(nextSector);	
+								break;
+							}
+						}
+					}
+					updateDescriptor(slot, sector);
+				}
 
 				u32 len2=len;
 				if((src - sector) + len2 > CACHE_READ_SIZE){
@@ -299,7 +472,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 					IPC_SendSync(0xEE24);
 
-					while(sharedAddr[3] != (vu32)0);
+					waitForArm7();
 					// -------------------------------------*/
 					#endif
 
@@ -323,7 +496,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 					IPC_SendSync(0xEE24);
 
-					while(sharedAddr[3] != (vu32)0);
+					waitForArm7();
 					// -------------------------------------*/
 					#endif
 
@@ -374,7 +547,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 				IPC_SendSync(0xEE24);
 
-				while(sharedAddr[3] != (vu32)0);
+				waitForArm7();
 				// -------------------------------------*/
 				#endif
 
@@ -398,7 +571,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 				IPC_SendSync(0xEE24);
 
-				while(sharedAddr[3] != (vu32)0);
+				waitForArm7();
 				// -------------------------------------
 				#endif
 
