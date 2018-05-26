@@ -53,9 +53,6 @@ Helpful information:
 #include "hook.h"
 #include "common.h"
 
-#include "datamobicliplist.h"
-#include "databwlist.h"
-
 void arm7clearRAM();
 int sdmmc_sdcard_readsectors(u32 sector_no, u32 numsectors, void *out);
 int sdmmc_sdcard_init();
@@ -315,41 +312,6 @@ void loadRomIntoRam(aFile file) {
 	} else */ if((fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
 		ROMinRAM = 1;
 		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
-	} else {
-		if((ROM_TID == 0x45535842) && (ROM_HEADERCRC == 0x1657CF56)) {		// Sonic Colors (U)
-			for(int i = 0; i < 3; i++)
-				setDataMobicliplist[i] = dataMobicliplist_BXSE0[i];
-		} else if((ROM_TID == 0x50454559) && (ROM_HEADERCRC == 0x7575CF56)) {		// Inazuma Eleven (E)
-			for(int i = 0; i < 3; i++)
-				setDataMobicliplist[i] = dataMobicliplist_YEEP0[i];
-		} else /* if((ROM_TID == 0x54595056) && (ROM_HEADERCRC == 0xC0C0CF56)) {		// Pokemon Conquest (U)
-			for(int i = 0; i < 7; i++)
-				setDataBWlist[i] = dataWhitelist_VPYT0[i];
-		} else */ if((ROM_TID == 0x45473256) && (ROM_HEADERCRC == 0xCC32CF56)) {		// Mario vs Donkey Kong: Mini-Land Mayhem (U)
-			for(int i = 0; i < 7; i++)
-				setDataBWlist[i] = dataBlacklist_V2GE0[i];
-		}
-		if(setDataBWlist[0] != 0 && setDataBWlist[1] != 0 && setDataBWlist[2] != 0){
-			ROMinRAM = 2;
-			if(setDataBWlist[3] == 1) {
-				fileRead(ROM_LOCATION, file, setDataBWlist[0], setDataBWlist[2]);
-				if(dataAmount >= 1) {
-					fileRead(ROM_LOCATION+setDataBWlist[2], file, setDataBWlist_1[0], setDataBWlist_1[2]);
-				}
-				if(dataAmount == 2) {
-					fileRead(ROM_LOCATION+setDataBWlist[2]+setDataBWlist_1[2], file, setDataBWlist_2[0], setDataBWlist_2[2]);
-				}
-			} else if(setDataBWlist[3] == 0) {
-				setDataBWlist[0] -= 0x4000;
-				setDataBWlist[0] -= ARM9_LEN;
-				fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, setDataBWlist[0]);
-				u32 lastRomSize = 0;
-				for(u32 i = setDataBWlist[1]; i < romSize; i++) {
-					lastRomSize++;
-				}
-				fileRead(ROM_LOCATION+setDataBWlist[0], file, setDataBWlist[1], lastRomSize);
-			}
-		}
 	}
 
 	hookNdsRetail_ROMinRAM((u32*)ENGINE_LOCATION_ARM9, ROMinRAM);
