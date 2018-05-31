@@ -346,29 +346,27 @@ int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, const u32* cheatData
 	return ERR_NONE;
 }
 
-void hookNdsRetail_ROMinRAM (u32* cardEngineLocation9, u32 ROMinRAM) {
+void hookNdsRetail_ROMinRAM (u32* cardEngineLocation9, u32 ROMinRAM, u32 cleanRomSize) {
 	cardEngineLocation9[7] = ROMinRAM;
 	cardEngineLocation9[8] = ROM_TID;
 	cardEngineLocation9[9] = ROM_HEADERCRC;
 	cardEngineLocation9[10] = ARM9_LEN;
 	cardEngineLocation9[11] = romSize;
-	cardEngineLocation9[12] = dsiModeConfirmed;
-	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[13+i] = setDataMobicliplist[i];
-	}
+	cardEngineLocation9[12] = cleanRomSize;
+	cardEngineLocation9[13] = dsiModeConfirmed;
 	for(int i = 0; i < 7; i++) {
-		cardEngineLocation9[16+i] = setDataBWlist[i];
+		cardEngineLocation9[14+i] = setDataBWlist[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[23+i] = setDataBWlist_1[i];
+		cardEngineLocation9[21+i] = setDataBWlist_1[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[26+i] = setDataBWlist_2[i];
+		cardEngineLocation9[24+i] = setDataBWlist_2[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[29+i] = setDataBWlist_3[i];
+		cardEngineLocation9[27+i] = setDataBWlist_3[i];
 	}
 	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[32+i] = setDataBWlist_4[i];
+		cardEngineLocation9[30+i] = setDataBWlist_4[i];
 	}
 }

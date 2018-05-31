@@ -289,6 +289,7 @@ void loadBinary_ARM7 (aFile file)
 
 void loadRomIntoRam(aFile file) {
 	u32 ROMinRAM = 0;
+	u32 cleanRomSize = romSize;
 
 	if((romSize & 0x0000000F) == 0x1
 	|| (romSize & 0x0000000F) == 0x3
@@ -304,17 +305,12 @@ void loadRomIntoRam(aFile file) {
 	romSize -= 0x4000;
 	romSize -= ARM9_LEN;
 
-	/*if(dsiModeConfirmed && (fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
-		ROM_LOCATION = 0x0D000000;
-		ROMinRAM = 1;
-		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
-	//} else if((romSize > 0) && (romSize <= 0x01B40000)) {
-	} else */ if((fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
+	if((fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
 		ROMinRAM = 1;
 		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
 	}
 
-	hookNdsRetail_ROMinRAM((u32*)ENGINE_LOCATION_ARM9, ROMinRAM);
+	hookNdsRetail_ROMinRAM((u32*)ENGINE_LOCATION_ARM9, ROMinRAM, cleanRomSize);
 	
 	/* if((ROM_TID & 0x00FFFFFF) == 0x595056) {
 		// Check overlays for card reads for Pokemon Conquest
