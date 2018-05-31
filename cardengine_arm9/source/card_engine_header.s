@@ -163,13 +163,6 @@ card_read_arm9:
     stmfd   sp!, {r4-r6,lr}
 
 	ldr		r6, =cardRead
-	
-	@ldr     r1, =0xE92D4FF0
-@wait_for_wram_card_read:
-	@ldr     r2, [r3]
-	@cmp     r1, r2
-	@bne     wait_for_wram_card_read
-	
 	bl		_blx_r3_stub_card_read	
 
     ldmfd   sp!, {r4-r6,lr}
