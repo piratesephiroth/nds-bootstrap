@@ -57,8 +57,8 @@ bool ndmaUsed = false;
 void initLogging() {
 	if(!initialized) {
 		if (sdmmc_read16(REG_SDSTATUS0) != 0) {
-			sdmmc_controller_init(false);
-			sdmmc_sdcard_init();
+			sdmmc_init();
+			SD_Init();
 		}
 		FAT_InitFiles(false);
 		romFile = getFileFromCluster(fileCluster);
