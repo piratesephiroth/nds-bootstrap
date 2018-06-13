@@ -15,6 +15,8 @@
 .global fileCluster
 .global saveCluster
 .global dsiMode
+.global consoleModel
+.global ntrTouch
 .global romread_LED
 .global gameSoftReset
 
@@ -39,10 +41,16 @@ cacheStruct:
 	.word	0x00000000
 dsiMode:
 	.word	0x00000000
+consoleModel:
+	.word	0x00000000
+ntrTouch:
+	.word	0x00000000
 romread_LED:
 	.word	0x00000000
 gameSoftReset:
 	.word	0x00000000
+cheat_data_offset:    
+	.word	cheat_data - patches_offset	
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 

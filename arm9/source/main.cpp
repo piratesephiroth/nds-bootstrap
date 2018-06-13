@@ -30,9 +30,13 @@
 #include "nds_loader_arm9.h"
 #include "inifile.h"
 
+int backlightMode = 0;
+
 using namespace std;
 
 static bool debug = false;
+
+static u32 cheatData [256];
 
 static inline int dbg_printf( const char* format, ... )
 {
@@ -65,7 +69,7 @@ void dopause() {
 	scanKeys();
 }
 
-void runFile(string filename, string savPath, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 loadingScreen, u32 romread_LED, u32 gameSoftReset) {
+void runFile(string filename, string savPath, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 consoleModel, u32 ntrTouch, u32 loadingScreen, u32 romread_LED, u32 gameSoftReset, u32* cheat_data) {
 	vector<char*> argarray;
 
 	if(debug)
@@ -99,16 +103,37 @@ void runFile(string filename, string savPath, u32 dsiMode, u32 patchMpuRegion, u
 		dbg_printf("no nds file specified\n");
 	} else {
 		dbg_printf("Running %s with %d parameters\n", argarray[0], argarray.size());
-		powerOn(PM_BACKLIGHT_TOP);
+		switch(backlightMode) {
+			case 0:
+			default:
+				powerOn(PM_BACKLIGHT_TOP);
+				//powerOn(PM_BACKLIGHT_BOTTOM);
+				break;
+			case 1:
+				powerOn(PM_BACKLIGHT_TOP);
+				powerOff(PM_BACKLIGHT_BOTTOM);
+				break;
+			case 2:
+				powerOff(PM_BACKLIGHT_TOP);
+				powerOn(PM_BACKLIGHT_BOTTOM);
+				break;
+			case 3:
+				powerOff(PM_BACKLIGHT_TOP);
+				powerOff(PM_BACKLIGHT_BOTTOM);
+				break;
+		}
 		int err = runNdsFile (argarray[0],
 							strdup(savPath.c_str()),
 							dsiMode,
 							patchMpuRegion,
 							patchMpuSize,
+							consoleModel,
+							ntrTouch,
 							loadingScreen,
 							romread_LED,
 							gameSoftReset,
-							argarray.size(), (const char **)&argarray[0]);
+							argarray.size(), (const char **)&argarray[0],
+                            cheat_data);
 		powerOff(PM_BACKLIGHT_TOP);
 		dbg_printf("Start failed. Error %i\n", err);
 
@@ -239,8 +264,28 @@ int main( int argc, char **argv) {
 
 		u32	patchMpuSize = bootstrapini.GetInt( "NDS-BOOTSTRAP", "PATCH_MPU_SIZE", 0);
 
+		cheatData[0] = 0xCF000000;
+        std::vector< std::string >  cheats;      
+        bootstrapini.GetStringVector("NDS-BOOTSTRAP","CHEAT_DATA",cheats, ' ');
+        if(cheats.size() > 0) {
+            dbg_printf("Cheat data present\n");
+            
+            if(cheats.size() < 256) {
+                 for (int i=0; i<cheats.size(); i++) {
+                    dbg_printf(cheats[i].c_str());
+                    dbg_printf(" ");
+                    cheatData[i] = strtol(("0x"+cheats[i]).c_str(),NULL,16); 
+                }
+                cheatData[cheats.size()] = 0xCF000000;
+            } else {
+				printf("1024 bytes CHEAT_DATA size limit reached, the cheats are ignored!\n");
+			}
+		}
+
+		backlightMode = bootstrapini.GetInt( "NDS-BOOTSTRAP", "BACKLIGHT_MODE", 0);
+
 		dbg_printf("Running %s\n", ndsPath.c_str());
-		runFile(ndsPath.c_str(), savPath.c_str(), bootstrapini.GetInt( "NDS-BOOTSTRAP", "DSI_MODE", 0), patchMpuRegion, patchMpuSize, bootstrapini.GetInt( "NDS-BOOTSTRAP", "LOADING_SCREEN", 1), romread_LED, bootstrapini.GetInt( "NDS-BOOTSTRAP", "GAME_SOFT_RESET", 0));	
+		runFile(ndsPath.c_str(), savPath.c_str(), bootstrapini.GetInt( "NDS-BOOTSTRAP", "DSI_MODE", 0), patchMpuRegion, patchMpuSize, bootstrapini.GetInt( "NDS-BOOTSTRAP", "CONSOLE_MODEL", 1), bootstrapini.GetInt( "NDS-BOOTSTRAP", "NTR_TOUCH", 0), bootstrapini.GetInt( "NDS-BOOTSTRAP", "LOADING_SCREEN", 1), romread_LED, bootstrapini.GetInt( "NDS-BOOTSTRAP", "GAME_SOFT_RESET", 0), (u32*)cheatData);	
 	} else {
 		consoleDemoInit();
 		printf("SD init failed!\n");

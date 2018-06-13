@@ -23,6 +23,8 @@
 
 extern bool dsiModeConfirmed;
 
+extern unsigned long consoleModel;
+extern unsigned long ntrTouch;
 extern unsigned long romread_LED;
 extern unsigned long gameSoftReset;
 
@@ -334,8 +336,10 @@ int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, const u32* cheatData
 	cardEngineLocation[2] = *ipcSyncHandler;
 	cardEngineLocation[4] = file.firstCluster;
 	cardEngineLocation[7] = dsiModeConfirmed;
-	cardEngineLocation[8] = romread_LED;
-	cardEngineLocation[9] = gameSoftReset;
+	cardEngineLocation[8] = consoleModel;
+	cardEngineLocation[9] = ntrTouch;
+	cardEngineLocation[10] = romread_LED;
+	cardEngineLocation[11] = gameSoftReset;
 
 	u32* patches =  (u32*) cardEngineLocation[0];
 

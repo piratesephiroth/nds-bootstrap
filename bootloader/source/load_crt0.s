@@ -35,6 +35,8 @@
 	.global donorSdkVer
 	.global patchMpuRegion
 	.global patchMpuSize
+	.global consoleModel
+	.global ntrTouch
 	.global loadingScreen
 	.global romread_LED
 	.global gameSoftReset
@@ -70,12 +72,20 @@ patchMpuRegion:
 	.word	0x00000000
 patchMpuSize:
 	.word	0x00000000
+consoleModel:
+	.word	0x00000000
+ntrTouch:
+	.word	0x00000000
 loadingScreen:
 	.word	0x00000000
 romread_LED:
 	.word	0x00000000
 gameSoftReset:
 	.word	0x00000000
+cardengine_arm7_offset:
+    .word   cardengine_arm7_bin - _start
+cardengine_arm9_offset:
+    .word   cardengine_arm9_bin - _start		
 
 startUp:
 	mov	r0, #0x04000000
