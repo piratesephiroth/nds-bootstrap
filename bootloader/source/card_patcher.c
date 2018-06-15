@@ -32,6 +32,7 @@ u32 a7something2Signature[2]   = {0x0000A040,0x040001A0};
 u32 a7JumpTableSignature[4] = {0xE5950024,0xE3500000,0x13A00001,0x03A00000};
 
 u32 j_HaltSignature5[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB2DB};
+u32 j_HaltSignature5Alt1[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB51F};
 
 u32 swi12Signature[1] = {0x4770DF12};	// LZ77UnCompReadByCallbackWrite16bit
 u32 swiGetPitchTableSignature5[4] = {0x781A4B06, 0xD3030791, 0xD20106D1, 0x1A404904};
@@ -1220,6 +1221,12 @@ void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 			  (u32*)j_HaltSignature5, 3, 1);
 	if (!swiHaltOffset) {
 		dbg_printf("swiHalt SDK5 call not found\n");
+		swiHaltOffset =   
+			getOffset((u32*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
+				  (u32*)j_HaltSignature5Alt1, 3, 1);
+	}
+	if (!swiHaltOffset) {
+		dbg_printf("swiHalt SDK5 call alt 1 not found\n");
 	}
 	if (swiHaltOffset>0) {
 		dbg_printf("swiHalt call found\n");
