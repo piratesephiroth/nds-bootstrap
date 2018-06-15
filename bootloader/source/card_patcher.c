@@ -31,6 +31,8 @@ u32 a7something2Signature[2]   = {0x0000A040,0x040001A0};
 
 u32 a7JumpTableSignature[4] = {0xE5950024,0xE3500000,0x13A00001,0x03A00000};
 
+u32 j_HaltSignature5[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB2DB};
+
 u32 swi12Signature[1] = {0x4770DF12};	// LZ77UnCompReadByCallbackWrite16bit
 u32 swiGetPitchTableSignature5[4] = {0x781A4B06, 0xD3030791, 0xD20106D1, 0x1A404904};
 
@@ -1211,6 +1213,21 @@ void swapBinary_ARM7(aFile donorfile)
 	NDS_HEAD[0x03C>>2] = ARM7_LEN;
 }
 
+void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
+	u32* patches =  (u32*) cardEngineLocation[0];
+	u32 swiHaltOffset =   
+		getOffset((u32*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
+			  (u32*)j_HaltSignature5, 3, 1);
+	if (!swiHaltOffset) {
+		dbg_printf("swiHalt SDK5 call not found\n");
+	}
+	if (swiHaltOffset>0) {
+		dbg_printf("swiHalt call found\n");
+		u32* swiHaltPatch = (u32*) patches[11];
+		copyLoop ((u32*)swiHaltOffset, swiHaltPatch, 0xC);
+	}
+}
+
 u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster) {
 	u32* debug = (u32*)0x037C6000;
 
@@ -1218,7 +1235,7 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	if(REG_SCFG_ROM != 0x703) {
 		u32 swi12Offset =   
-			getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm7binarySize,
+			getOffset((u32*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
 				  (u32*)swi12Signature, 1, 1);
 		if (!swi12Offset) {
 			dbg_printf("swi 0x12 call not found\n");
@@ -1230,16 +1247,17 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 		}
 
 		u32 swiGetPitchTableOffset =   
-			getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
+			getOffset((u32*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm9binarySize,
 				  (u32*)swiGetPitchTableSignature5, 4, 1);
 		if (!swiGetPitchTableOffset) {
 			dbg_printf("swiGetPitchTable call not found\n");
 		} else {
-			u32* swiGetPitchTablePatch = (u32*) patches[11];
+			u32* swiGetPitchTablePatch = (u32*) patches[12];
 			copyLoop ((u32*)swiGetPitchTableOffset, swiGetPitchTablePatch, 0xC);
 			dbg_printf("swiGetPitchTable call found\n");
 		}
 	}
+	patchSwiHalt(ndsHeader, cardEngineLocation);
 
 	u32* irqEnableStartSignature = irqEnableStartSignature1;
 	u32* cardCheckPullOutSignature = cardCheckPullOutSignature1;

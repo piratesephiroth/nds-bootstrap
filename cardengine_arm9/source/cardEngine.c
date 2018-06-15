@@ -73,7 +73,7 @@ static u32 cacheReadSizeSubtract = 0;
 static u32 asyncReadSizeSubtract = 0;
 
 static u32 asyncSector = 0xFFFFFFFF;
-static u32 asyncQueue [10];
+static u32 asyncQueue [5];
 static int aQHead = 0;
 static int aQTail = 0;
 static int aQSize = 0;
@@ -172,13 +172,13 @@ void addToAsyncQueue(sector) {
 	asyncQueue[aQHead] = sector;
 	aQHead++;
 	aQSize++;
-	if(aQHead>9) {
+	if(aQHead>4) {
 		aQHead=0;
 	}
-	if(aQSize>10) {
-		aQSize=10;
+	if(aQSize>5) {
+		aQSize=5;
 		aQTail++;
-		if(aQTail>9) aQTail=0;
+		if(aQTail>4) aQTail=0;
 	}
 }
 
@@ -400,7 +400,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						triggerAsyncPrefetch(nextSector);	
 					} else {
 						int i;
-						for(i=0; i<10; i++) {
+						for(i=0; i<5; i++) {
 							if(asyncQueue[i]==sector) {
 								// prefetch successfull
 								triggerAsyncPrefetch(nextSector);	

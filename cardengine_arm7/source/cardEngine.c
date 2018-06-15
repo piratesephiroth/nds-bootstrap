@@ -46,11 +46,15 @@ extern u32 consoleModel;
 extern u32 ntrTouch;
 extern u32 romread_LED;
 extern u32 gameSoftReset;
+u32 numberToActivateRunViaHalt = 10;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
 static aFile romFile;
 static aFile savFile;
 
+static bool runViaHalt = false;
 static bool saveInProgress = false;
+static bool readInProgress = false;
+static int accessCounter = 0;
 
 static int softResetTimer = 0;
 
@@ -266,22 +270,73 @@ void runCardEngineCheck (void) {
 
 		//nocashMessage("runCardEngineCheck mutex ok");
 
+		if (*(vu32*)(0x027FFB14) != 0 && !readInProgress) {
+			if (accessCounter > numberToActivateRunViaHalt-1) {
+				accessCounter = numberToActivateRunViaHalt;
+				runViaHalt = true;
+			}
+			if(*(vu32*)(0x027FFB14) == (vu32)0x026ff800)
+			{
+				readInProgress = true;
+				log_arm9();
+				*(vu32*)(0x027FFB14) = 0;
+				readInProgress = false;
+			}
+
+			if(*(vu32*)(0x027FFB14) == (vu32)0x025FFB08)
+			{
+				readInProgress = true;
+				cardRead_arm9();
+				*(vu32*)(0x027FFB14) = 0;
+				accessCounter++;
+				readInProgress = false;
+			}
+
+			if(*(vu32*)(0x027FFB14) == (vu32)0x020ff800)
+			{
+				readInProgress = true;
+				asyncCardRead_arm9();
+				*(vu32*)(0x027FFB14) = 0;
+				accessCounter++;
+				readInProgress = false;
+			}
+		}
+		unlockMutex();
+	}
+}
+
+void runCardEngineCheckHalt (void) {
+	//dbg_printf("runCardEngineCheckHalt\n");
+	#ifdef DEBUG		
+	nocashMessage("runCardEngineCheckHalt");
+	#endif	
+
+	if(tryLockMutex()) {
+		initLogging();
+
+		//nocashMessage("runCardEngineCheck mutex ok");
 		if(*(vu32*)(0x027FFB14) == (vu32)0x026ff800)
 		{
+			//readInProgress = true;
 			log_arm9();
 			*(vu32*)(0x027FFB14) = 0;
+			//readInProgress = false;
 		}
 
 		if(*(vu32*)(0x027FFB14) == (vu32)0x025FFB08)
 		{
+			//readInProgress = true;
 			cardRead_arm9();
 			*(vu32*)(0x027FFB14) = 0;
+			//readInProgress = false;
 		}
 
 		if(*(vu32*)(0x027FFB14) == (vu32)0x020ff800)
 		{
+			//readInProgress = true;
 			asyncCardRead_arm9();
 			*(vu32*)(0x027FFB14) = 0;
+			//readInProgress = false;
 		}
 		unlockMutex();
 	}
@@ -296,7 +351,21 @@ void myIrqHandlerFIFO(void) {
 	
 	calledViaIPC = true;
 	
-	runCardEngineCheck();
+	if (!runViaHalt) runCardEngineCheck();
+}
+
+//---------------------------------------------------------------------------------
+void myIrqHandlerHalt(void) {
+//---------------------------------------------------------------------------------
+	#ifdef DEBUG		
+	nocashMessage("myIrqHandlerHalt");
+	#endif	
+	
+	calledViaIPC = false;
+	
+	if (runViaHalt) {
+		runCardEngineCheckHalt();
+	}
 }
 
 
@@ -473,7 +542,7 @@ void myIrqHandlerVBlank(void) {
 		REG_MASTER_VOLUME = volLevel;
 	}
 
-	runCardEngineCheck();
+	if (!runViaHalt) runCardEngineCheck();
     
     nocashMessage("cheat_engine_start\n");
     cheat_engine_start();
