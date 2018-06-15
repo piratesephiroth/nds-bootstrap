@@ -38,10 +38,10 @@ extern u32 consoleModel;
 #define _768KB_READ_SIZE 0xC0000
 #define _1MB_READ_SIZE 0x100000
 
-#define retail_CACHE_ADRESS_START 0x0C4A0000
-#define retail_CACHE_ADRESS_SIZE 0x340000
-#define retail_128KB_CACHE_SLOTS 0x1A
-#define retail_192KB_CACHE_SLOTS 0x11
+#define retail_CACHE_ADRESS_START 0x0C480000
+#define retail_CACHE_ADRESS_SIZE 0x360000
+#define retail_128KB_CACHE_SLOTS 0x1B
+#define retail_192KB_CACHE_SLOTS 0x12
 #define retail_256KB_CACHE_SLOTS 0xD
 #define retail_512KB_CACHE_SLOTS 0x6
 #define retail_768KB_CACHE_SLOTS 0x4
@@ -55,7 +55,7 @@ extern u32 consoleModel;
 #define dev_768KB_CACHE_SLOTS 0x15
 #define dev_1MB_CACHE_SLOTS 0x10
 
-vu32* volatile cardStruct = 0x0C487BC0;
+vu32* volatile cardStruct = 0x0C807BC0;
 //extern vu32* volatile cacheStruct;
 extern u32 sdk_version;
 extern u32 needFlushDCCache;
