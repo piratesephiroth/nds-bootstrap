@@ -81,6 +81,7 @@ extern unsigned long saveFileCluster;
 extern unsigned long dsiMode;
 extern unsigned long patchMpuRegion;
 extern unsigned long patchMpuSize;
+extern unsigned long consoleModel;
 extern unsigned long ntrTouch;
 extern unsigned long loadingScreen;
 extern unsigned long romread_LED;
@@ -543,12 +544,12 @@ void loadRomIntoRam(aFile file) {
 	romSize -= 0x4000;
 	romSize -= ARM9_LEN;
 
-	if((fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
+	if((consoleModel > 0) && (fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
 		ROMinRAM = 1;
 		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
 	}
 
-	hookNdsRetail_ROMinRAM((u32*)ENGINE_LOCATION_ARM9, ROMinRAM, cleanRomSize);
+	hookNdsRetail9((u32*)ENGINE_LOCATION_ARM9, ROMinRAM, cleanRomSize);
 	
 	/* if((ROM_TID & 0x00FFFFFF) == 0x595056) {
 		// Check overlays for card reads for Pokemon Conquest

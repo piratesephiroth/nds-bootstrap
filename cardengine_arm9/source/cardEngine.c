@@ -27,6 +27,7 @@ extern u32 ROM_HEADERCRC;
 extern u32 ARM9_LEN;
 extern u32 romSize;
 extern u32 cleanRomSize;
+extern u32 consoleModel;
 
 #define _32KB_READ_SIZE 0x8000
 #define _64KB_READ_SIZE 0x10000
@@ -37,36 +38,42 @@ extern u32 cleanRomSize;
 #define _768KB_READ_SIZE 0xC0000
 #define _1MB_READ_SIZE 0x100000
 
-#define dsMode_CACHE_ADRESS_START 0x0C4A0000
-#define dsMode_CACHE_ADRESS_SIZE 0x1B40000
-#define dsMode_128KB_CACHE_SLOTS 0xDA
-#define dsMode_128KB_CACHE_SLOTS_part1 0x5A
-#define dsiMode_CACHE_ADRESS_START 0x0D000000
-#define dsiMode_CACHE_ADRESS_SIZE 0x1000000
-#define dsiMode_128KB_CACHE_SLOTS 0x80
-//#define dsiMode_192KB_CACHE_SLOTS 0x55
-//#define dsiMode_256KB_CACHE_SLOTS 0x40
-//#define dsiMode_512KB_CACHE_SLOTS 0x20
-//#define dsiMode_768KB_CACHE_SLOTS 0x15
-//#define dsiMode_1MB_CACHE_SLOTS 0x10
+#define retail_CACHE_ADRESS_START 0x0C4A0000
+#define retail_CACHE_ADRESS_SIZE 0x340000
+#define retail_128KB_CACHE_SLOTS 0x1A
+#define retail_192KB_CACHE_SLOTS 0x11
+#define retail_256KB_CACHE_SLOTS 0xD
+#define retail_512KB_CACHE_SLOTS 0x6
+#define retail_768KB_CACHE_SLOTS 0x4
+#define retail_1MB_CACHE_SLOTS 0x3
+#define dev_CACHE_ADRESS_START 0x0D000000
+#define dev_CACHE_ADRESS_SIZE 0x1000000
+#define dev_128KB_CACHE_SLOTS 0x80
+#define dev_192KB_CACHE_SLOTS 0x55
+#define dev_256KB_CACHE_SLOTS 0x40
+#define dev_512KB_CACHE_SLOTS 0x20
+#define dev_768KB_CACHE_SLOTS 0x15
+#define dev_1MB_CACHE_SLOTS 0x10
 
-vu32* volatile cardStruct = 0x0C497BC0;
-vu32* volatile fat = 0x0C488000;
+vu32* volatile cardStruct = 0x0C487BC0;
 //extern vu32* volatile cacheStruct;
 extern u32 sdk_version;
 extern u32 needFlushDCCache;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
 extern volatile int (*readCachedRef)(u32*); // this pointer is not at the end of the table but at the handler pointer corresponding to the current irq
 
-static u32 cacheDescriptor [dsMode_128KB_CACHE_SLOTS];
-static u32 cacheCounter [dsMode_128KB_CACHE_SLOTS];
+static u32 cacheDescriptor [dev_128KB_CACHE_SLOTS] = {0xffffffff};
+static u32 cacheCounter [dev_128KB_CACHE_SLOTS];
 static u32 accessCounter = 0;
+
+static u32 cacheAddress = retail_CACHE_ADRESS_START;
+static u16 cacheSlots = retail_128KB_CACHE_SLOTS;
 
 static u32 cacheReadSizeSubtract = 0;
 static u32 asyncReadSizeSubtract = 0;
 
 static u32 asyncSector = 0xFFFFFFFF;
-static u32 asyncQueue [5];
+static u32 asyncQueue [10];
 static int aQHead = 0;
 static int aQTail = 0;
 static int aQSize = 0;
@@ -122,30 +129,7 @@ void setExceptionHandler2() {
 int allocateCacheSlot() {
 	int slot = 0;
 	u32 lowerCounter = accessCounter;
-	//if(dsiMode) {
-		for(int i=0; i<dsiMode_128KB_CACHE_SLOTS; i++) {
-			if(cacheCounter[i]<=lowerCounter) {
-				lowerCounter = cacheCounter[i];
-				slot = i;
-				if(!lowerCounter) return slot;
-			}
-		}
-	/*} else {
-		for(int i=0; i<dsMode_128KB_CACHE_SLOTS; i++) {
-			if(cacheCounter[i]<=lowerCounter) {
-				lowerCounter = cacheCounter[i];
-				slot = i;
-				if(!lowerCounter) return slot;
-			}
-		}
-	}*/
-	return slot;
-}
-
-int GAME_allocateCacheSlot() {
-	int slot = 0;
-	u32 lowerCounter = accessCounter;
-	for(int i=0; i<setDataBWlist[5]; i++) {
+	for(int i=0; i<cacheSlots; i++) {
 		if(cacheCounter[i]<=lowerCounter) {
 			lowerCounter = cacheCounter[i];
 			slot = i;
@@ -156,24 +140,7 @@ int GAME_allocateCacheSlot() {
 }
 
 int getSlotForSector(u32 sector) {
-	//if(dsiMode) {
-		for(int i=0; i<dsiMode_128KB_CACHE_SLOTS; i++) {
-			if(cacheDescriptor[i]==sector) {
-				return i;
-			}
-		}
-	/*} else {
-		for(int i=0; i<dsMode_128KB_CACHE_SLOTS; i++) {
-			if(cacheDescriptor[i]==sector) {
-				return i;
-			}
-		}
-	}*/
-	return -1;
-}
-
-int GAME_getSlotForSector(u32 sector) {
-	for(int i=0; i<setDataBWlist[5]; i++) {
+	for(int i=0; i<cacheSlots; i++) {
 		if(cacheDescriptor[i]==sector) {
 			return i;
 		}
@@ -183,20 +150,7 @@ int GAME_getSlotForSector(u32 sector) {
 
 
 vu8* getCacheAddress(int slot) {
-	//if(dsiMode) {
-		return (vu32*)(dsiMode_CACHE_ADRESS_START+slot*_128KB_READ_SIZE);
-	/*} else {
-		if(slot >= dsMode_128KB_CACHE_SLOTS_part1) {
-			slot -= dsMode_128KB_CACHE_SLOTS_part1;
-			return (vu32*)(dsiMode_CACHE_ADRESS_START+slot*_128KB_READ_SIZE);
-		} else {
-			return (vu32*)(dsMode_CACHE_ADRESS_START+slot*_128KB_READ_SIZE);
-		}
-	}*/
-}
-
-vu8* GAME_getCacheAddress(int slot) {
-	return (vu32*)(setDataBWlist[4]+slot*setDataBWlist[6]);
+	return (vu32*)(cacheAddress+slot*_128KB_READ_SIZE);
 }
 
 void updateDescriptor(int slot, u32 sector) {
@@ -218,25 +172,14 @@ void addToAsyncQueue(sector) {
 	asyncQueue[aQHead] = sector;
 	aQHead++;
 	aQSize++;
-	if(aQHead>4) {
+	if(aQHead>9) {
 		aQHead=0;
 	}
-	if(aQSize>5) {
-		aQSize=5;
+	if(aQSize>10) {
+		aQSize=10;
 		aQTail++;
-		if(aQTail>4) aQTail=0;
+		if(aQTail>9) aQTail=0;
 	}
-}
-
-u32 popFromAsyncQueueHead() {	
-	if(aQSize>0) {
-	
-		aQHead--;
-		if(aQHead == -1) aQHead = 4;
-		aQSize--;
-		
-		return asyncQueue[aQHead];
-	} else return 0;
 }
 
 void triggerAsyncPrefetch(sector) {	
@@ -331,8 +274,6 @@ void getAsyncSector() {
 int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 	//nocashMessage("\narm9 cardRead\n");
 
-	setExceptionHandler2();
-
 	u32 commandRead;
 	
 	u8* dst = dst0;
@@ -349,15 +290,22 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 	u32 page = (src/512)*512;
 
 	if(!flagsSet) {
+		setExceptionHandler2();
+		
+		if (consoleModel > 0) {
+			cacheAddress = dev_CACHE_ADRESS_START;
+			cacheSlots = dev_128KB_CACHE_SLOTS;
+		}
+
 		// If ROM size is 0x01000000 or below, then the ROM is in RAM.
 		if(dsiMode) {
 			REG_SCFG_EXT = 0x8307F100;
-			if((romSize > 0) && (romSize <= dsiMode_CACHE_ADRESS_SIZE) || setDataBWlist[3]==false) {
+			if((consoleModel > 0) && (romSize > 0) && (romSize <= dev_CACHE_ADRESS_SIZE) || setDataBWlist[3]==false) {
 				ROM_LOCATION = 0x0D000000;
 				ROM_LOCATION -= 0x4000;
 				ROM_LOCATION -= ARM9_LEN;
 			}
-		} else if((romSize > 0) && (romSize <= dsiMode_CACHE_ADRESS_SIZE) || setDataBWlist[3]==false) {
+		} else if((consoleModel > 0) && (romSize > 0) && (romSize <= dev_CACHE_ADRESS_SIZE) || setDataBWlist[3]==false) {
 			ROM_LOCATION -= 0x4000;
 			ROM_LOCATION -= ARM9_LEN;
 		}
@@ -452,7 +400,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 						triggerAsyncPrefetch(nextSector);	
 					} else {
 						int i;
-						for(i=0; i<5; i++) {
+						for(i=0; i<10; i++) {
 							if(asyncQueue[i]==sector) {
 								// prefetch successfull
 								triggerAsyncPrefetch(nextSector);	
@@ -538,7 +486,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 				}
 			}
 		}
-	} else if (ROMinRAM==1) {
+	} else if ((consoleModel > 0) && (ROMinRAM==1)) {
 		// Prevent overwriting ROM in RAM
 		if(dst > 0x0D000000 && dst < 0x0E000000) {
 			if(use16MB==2) {

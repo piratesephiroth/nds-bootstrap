@@ -25,9 +25,9 @@
 #include "i2c.h"
 
 #include "sr_data_error.h"	// For showing an error screen
-#include "sr_data_srloader.h"	// For rebooting into SRLoader
-#include "sr_data_twlnandside.h"	// For rebooting the game (NTR-mode touch screen)
-#include "sr_data_twlnandside_twltouch.h"	// For rebooting the game (TWL-mode touch screen)
+#include "sr_data_srloader.h"	// For rebooting into DSiMenu++
+#include "sr_data_srllastran.h"	// For rebooting the game (NTR-mode touch screen)
+#include "sr_data_srllastran_twltouch.h"	// For rebooting the game (TWL-mode touch screen)
 
 extern void* memcpy(const void * src0, void * dst0, int len0);	// Fixes implicit declaration @ line 126 & 136
 extern int tryLockMutex(void);					// Fixes implicit declaration @ line 145
@@ -62,15 +62,15 @@ void initLogging() {
 			sdmmc_init();
 			SD_Init();
 		}
-		FAT_InitFiles(false);
+		FAT_InitFiles(false, 3);
 		romFile = getFileFromCluster(fileCluster);
 		if(saveCluster>0)
 			savFile = getFileFromCluster(saveCluster);
 		else
 			savFile.firstCluster = CLUSTER_FREE;
-		buildFatTableCache(romFile);
+		buildFatTableCache(romFile, 3);
 		#ifdef DEBUG		
-		aFile myDebugFile = getBootFileCluster ("NDSBTSRP.LOG");
+		aFile myDebugFile = getBootFileCluster ("NDSBTSRP.LOG", 3);
 		enableDebug(myDebugFile);
 		dbg_printf("logging initialized\n");		
 		dbg_printf("sdk version :");
@@ -203,7 +203,7 @@ void cardRead_arm9() {
 	#endif
 
 	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
-	fileRead(dst,romFile,src,len);
+	fileRead(dst,romFile,src,len,0);
 	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
 
 	#ifdef DEBUG
@@ -242,7 +242,7 @@ void asyncCardRead_arm9() {
 	#endif
 
 	asyncCardReadLED(true);    // When a file is loading, turn on LED for async card read indicator
-	fileRead(dst,romFile,src,len);
+	fileRead(dst,romFile,src,len,0);
 	asyncCardReadLED(false);    // After loading is done, turn off LED for async card read indicator
 
 	#ifdef DEBUG
@@ -321,9 +321,9 @@ void myIrqHandlerVBlank(void) {
 	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_START | KEY_SELECT)) {
 	} else if (!saveInProgress && !gameSoftReset) {
 		if (dsiMode) {
-			memcpy((u32*)0x02000300,sr_data_twlnandside_twltouch,0x020);
+			memcpy((u32*)0x02000300,sr_data_srllastran_twltouch,0x020);
 		} else {
-			memcpy((u32*)0x02000300,sr_data_twlnandside,0x020);
+			memcpy((u32*)0x02000300,sr_data_srllastran,0x020);
 		}
 		i2cWriteRegister(0x4a,0x70,0x01);
 		i2cWriteRegister(0x4a,0x11,0x01);	// Reboot game
@@ -534,7 +534,7 @@ bool eepromRead (u32 src, void *dst, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-	fileRead(dst,savFile,src,len);
+	fileRead(dst,savFile,src,len,1);
 
 	return true;
 }
@@ -553,7 +553,7 @@ bool eepromPageWrite (u32 dst, const void *src, u32 len) {
 
 	saveInProgress = true;
 	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	fileWrite(src,savFile,dst,len);
+	fileWrite(src,savFile,dst,len,1);
 	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
 	saveInProgress = false;
 
@@ -574,7 +574,7 @@ bool eepromPageProg (u32 dst, const void *src, u32 len) {
 
 	saveInProgress = true;
 	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	fileWrite(src,savFile,dst,len);
+	fileWrite(src,savFile,dst,len,1);
 	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
 	saveInProgress = false;
 
@@ -594,7 +594,7 @@ bool eepromPageVerify (u32 dst, const void *src, u32 len) {
 	#endif	
 
 	//i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	//fileWrite(src,savFile,dst,len);
+	//fileWrite(src,savFile,dst,len,1);
 	//i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
 	return true;
 }
@@ -631,7 +631,7 @@ bool cardRead (u32 dma,  u32 src, void *dst, u32 len) {
 
 	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
 	//ndmaUsed = false;
-	fileRead(dst,romFile,src,len);
+	fileRead(dst,romFile,src,len,2);
 	//ndmaUsed = true;
 	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
 

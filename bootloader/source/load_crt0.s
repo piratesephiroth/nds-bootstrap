@@ -30,9 +30,7 @@
 	.global argSize
 	.global dsiSD
 	.global saveFileCluster
-	.global donorFileCluster
-	.global useArm7Donor
-	.global donorSdkVer
+	.global dsiMode
 	.global patchMpuRegion
 	.global patchMpuSize
 	.global consoleModel
@@ -40,7 +38,6 @@
 	.global loadingScreen
 	.global romread_LED
 	.global gameSoftReset
-	.global dsiMode
 @---------------------------------------------------------------------------------
 	.align	4
 	.arm
