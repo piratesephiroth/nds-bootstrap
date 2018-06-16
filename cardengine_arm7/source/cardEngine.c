@@ -72,7 +72,7 @@ void initLogging() {
 			savFile = getFileFromCluster(saveCluster);
 		else
 			savFile.firstCluster = CLUSTER_FREE;
-		buildFatTableCache(romFile, 3);
+		buildFatTableCache(&romFile, 3);
 		#ifdef DEBUG		
 		aFile myDebugFile = getBootFileCluster ("NDSBTSRP.LOG", 3);
 		enableDebug(myDebugFile);
