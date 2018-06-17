@@ -88,13 +88,6 @@ extern unsigned long romread_LED;
 extern unsigned long gameSoftReset;
 
 bool dsiModeConfirmed = false;
-u32 setDataMobicliplist[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist[7] = {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_1[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_2[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_3[3] = {0x00000000, 0x00000000, 0x00000000};
-u32 setDataBWlist_4[3] = {0x00000000, 0x00000000, 0x00000000};
-int dataAmount = 0;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Used for debugging purposes
@@ -526,42 +519,6 @@ void loadBinary_ARM7 (aFile file)
 	}
 }
 
-void loadRomIntoRam(aFile file) {
-	u32 ROMinRAM = 0;
-	u32 cleanRomSize = romSize;
-
-	if((romSize & 0x0000000F) == 0x1
-	|| (romSize & 0x0000000F) == 0x3
-	|| (romSize & 0x0000000F) == 0x5
-	|| (romSize & 0x0000000F) == 0x7
-	|| (romSize & 0x0000000F) == 0x9
-	|| (romSize & 0x0000000F) == 0xB
-	|| (romSize & 0x0000000F) == 0xD
-	|| (romSize & 0x0000000F) == 0xF)
-	{
-		romSize--;	// If ROM size is at an odd number, subtract 1 from it.
-	}
-	romSize -= 0x4000;
-	romSize -= ARM9_LEN;
-
-	if((consoleModel > 0) && (fatSize > 0) && (romSize > 0) && (romSize <= 0x01000000)) {
-		ROMinRAM = 1;
-		fileRead(ROM_LOCATION, file, 0x4000+ARM9_LEN, romSize);
-	}
-
-	hookNdsRetail9((u32*)ENGINE_LOCATION_ARM9, ROMinRAM, cleanRomSize);
-	
-	/* if((ROM_TID & 0x00FFFFFF) == 0x595056) {
-		// Check overlays for card reads for Pokemon Conquest
-		//u32 arm9overlayLocations[15] =
-		//{ 0x00072A00, 0x00076800, 0x000A2400, 0x000E3C00, 0x000FFC00, 
-		//0x000FFE00, 0x00117C00, 0x0011EC00, 0x0011EE00, 0x00120600, 
-		//0x00122400, 0x00129600, 0x0012AC00, 0x00141800, 0x0014FC00 }
-		module_params_t* params = findModuleParams(NDS_HEAD, donorSdkVer);
-		patchCardNdsArm9Overlay(ROM_LOCATION,setDataBWlist[2],ENGINE_LOCATION_ARM9,params, patchMpuRegion, patchMpuSize);
-	} */
-}
-
 /*-------------------------------------------------------------------------
 startBinary_ARM7
 Jumps to the ARM7 NDS binary in sync with the display and ARM9
@@ -733,9 +690,9 @@ void arm7_main (void) {
  
 
 
-	loadRomIntoRam(file);
+	hookNdsRetail9((u32*)ENGINE_LOCATION_ARM9, romSize);
 
-	if(romread_LED == 1 || romread_LED == 2) {
+	if(romread_LED == 1) {
 		i2cWriteRegister(0x4A, 0x30, 0x12);    // Turn WiFi LED off
 	}
 

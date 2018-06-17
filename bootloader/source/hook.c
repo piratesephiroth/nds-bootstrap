@@ -350,28 +350,11 @@ int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, const u32* cheatData
 	return ERR_NONE;
 }
 
-void hookNdsRetail9 (u32* cardEngineLocation9, u32 ROMinRAM, u32 cleanRomSize) {
-	cardEngineLocation9[7] = ROMinRAM;
-	cardEngineLocation9[8] = ROM_TID;
-	cardEngineLocation9[9] = ROM_HEADERCRC;
-	cardEngineLocation9[10] = ARM9_LEN;
-	cardEngineLocation9[11] = romSize;
-	cardEngineLocation9[12] = cleanRomSize;
-	cardEngineLocation9[13] = dsiModeConfirmed;
-	cardEngineLocation9[14] = consoleModel;
-	for(int i = 0; i < 7; i++) {
-		cardEngineLocation9[15+i] = setDataBWlist[i];
-	}
-	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[22+i] = setDataBWlist_1[i];
-	}
-	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[25+i] = setDataBWlist_2[i];
-	}
-	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[28+i] = setDataBWlist_3[i];
-	}
-	for(int i = 0; i < 3; i++) {
-		cardEngineLocation9[31+i] = setDataBWlist_4[i];
-	}
+void hookNdsRetail9 (u32* cardEngineLocation9, u32 romSize) {
+	cardEngineLocation9[7] = ROM_TID;
+	cardEngineLocation9[8] = ROM_HEADERCRC;
+	cardEngineLocation9[9] = ARM9_LEN;
+	cardEngineLocation9[10] = romSize;
+	cardEngineLocation9[11] = dsiModeConfirmed;
+	cardEngineLocation9[12] = consoleModel;
 }
