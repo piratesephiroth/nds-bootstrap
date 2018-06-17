@@ -170,7 +170,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 	sharedAddr[2] = src;
 	sharedAddr[3] = commandRead;
 
-	IPC_SendSync(0xEE24);
+	//IPC_SendSync(0xEE24);
 
 	waitForArm7();
 	// -------------------------------------*/
