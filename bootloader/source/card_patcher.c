@@ -1196,26 +1196,6 @@ u32 savePatchV1 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
     return 1;
 }*/
 
-void swapBinary_ARM7(aFile donorfile)
-{
-	u32 ndsHeader[0x170>>2];
-
-	nocashMessage("loadBinary_ARM7");
-
-	// read NDS header
-	fileRead ((char*)ndsHeader, donorfile, 0, 0x170);
-	// read ARM7 info from NDS header
-	u32 ARM7_SRC = ndsHeader[0x030>>2];
-	char* ARM7_DST = (char*)ndsHeader[0x038>>2];
-	u32 ARM7_LEN = ndsHeader[0x03C>>2];
-
-	fileRead(ARM7_DST, donorfile, ARM7_SRC, ARM7_LEN);
-
-	NDS_HEAD[0x030>>2] = ARM7_SRC;
-	NDS_HEAD[0x038>>2] = ARM7_DST;
-	NDS_HEAD[0x03C>>2] = ARM7_LEN;
-}
-
 void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 	u32* patches =  (u32*) cardEngineLocation[0];
 	u32 swiHaltOffset =   

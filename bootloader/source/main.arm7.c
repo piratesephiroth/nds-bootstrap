@@ -464,7 +464,7 @@ void loadBinary_ARM7 (aFile file)
 	nocashMessage("loadBinary_ARM7");
 
 	// read NDS header
-	fileRead ((char*)ndsHeader, file, 0, 0x2F0);
+	fileRead ((char*)ndsHeader, file, 0, 0x2F0, 2);
 	// read ARM9 info from NDS header
 	u32 ARM9_SRC = ndsHeader[0x020>>2];
 	char* ARM9_DST = (char*)ndsHeader[0x028>>2];
@@ -480,7 +480,7 @@ void loadBinary_ARM7 (aFile file)
 	
 	u32 fat[0x8000>>2];
 	// Load File Allocation Table into memory
-	fileRead((char*)fat, file, FAT_SRC, FAT_LEN);
+	fileRead((char*)fat, file, FAT_SRC, FAT_LEN, 3);
 	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);
 
 	ROM_TID = ndsHeader[0x00C>>2];
@@ -489,8 +489,8 @@ void loadBinary_ARM7 (aFile file)
 	ROM_HEADERCRC = ndsHeader[0x15C>>2];
 	
 	// Load binaries into memory
-	fileRead(ARM9_DST, file, ARM9_SRC, ARM9_LEN);
-	fileRead(ARM7_DST, file, ARM7_SRC, ARM7_LEN);
+	fileRead(ARM9_DST, file, ARM9_SRC, ARM9_LEN, 3);
+	fileRead(ARM7_DST, file, ARM7_SRC, ARM7_LEN, 3);
 
 	// first copy the header to its proper location, excluding
 	// the ARM9 start address, so as not to start it
@@ -510,9 +510,9 @@ void loadBinary_ARM7 (aFile file)
 		u32 ARM7i_LEN = ndsHeader[0x1DC>>2];
 
 		if (ARM9i_LEN)
-			fileRead(ARM9i_DST, file, ARM9i_SRC, ARM9i_LEN);
+			fileRead(ARM9i_DST, file, ARM9i_SRC, ARM9i_LEN, 3);
 		if (ARM7i_LEN)
-			fileRead(ARM7i_DST, file, ARM7i_SRC, ARM7i_LEN);
+			fileRead(ARM7i_DST, file, ARM7i_SRC, ARM7i_LEN, 3);
 	} else {
 		// Switch to NTR Mode
 		REG_SCFG_ROM = 0x703;
@@ -619,7 +619,7 @@ void arm7_main (void) {
 	}
 
 	// Init card
-	if(!FAT_InitFiles(initDisc))
+	if(!FAT_InitFiles(initDisc, 3))
 	{
 		nocashMessage("!FAT_InitFiles");
 		return -1;
@@ -629,7 +629,7 @@ void arm7_main (void) {
 
 	if ((file.firstCluster < CLUSTER_FIRST) || (file.firstCluster >= CLUSTER_EOF)) 	/* Invalid file cluster specified */
 	{
-		file = getBootFileCluster(bootName);
+		file = getBootFileCluster(bootName, 3);
 	}
 	if (file.firstCluster == CLUSTER_FREE)
 	{
