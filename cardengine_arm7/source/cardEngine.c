@@ -48,7 +48,7 @@ extern u32 romread_LED;
 extern u32 gameSoftReset;
 u32 numberToActivateRunViaHalt = 10;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
-static aFile romFile;
+static aFile * romFile = (aFile *)0x37D5000;
 static aFile savFile;
 
 static bool runViaHalt = false;
@@ -67,12 +67,12 @@ void initLogging() {
 			SD_Init();
 		}
 		FAT_InitFiles(false, 3);
-		romFile = getFileFromCluster(fileCluster);
+		//romFile = getFileFromCluster(fileCluster);
 		if(saveCluster>0)
 			savFile = getFileFromCluster(saveCluster);
 		else
 			savFile.firstCluster = CLUSTER_FREE;
-		buildFatTableCache(&romFile, 3);
+		//buildFatTableCache(&romFile, 3);
 		#ifdef DEBUG		
 		aFile myDebugFile = getBootFileCluster ("NDSBTSRP.LOG", 3);
 		enableDebug(myDebugFile);
@@ -207,7 +207,7 @@ void cardRead_arm9() {
 	#endif
 
 	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
-	fileRead(dst,romFile,src,len,0);
+	fileRead(dst,*romFile,src,len,0);
 	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
 
 	#ifdef DEBUG
@@ -246,7 +246,7 @@ void asyncCardRead_arm9() {
 	#endif
 
 	asyncCardReadLED(true);    // When a file is loading, turn on LED for async card read indicator
-	fileRead(dst,romFile,src,len,0);
+	fileRead(dst,*romFile,src,len,0);
 	asyncCardReadLED(false);    // After loading is done, turn off LED for async card read indicator
 
 	#ifdef DEBUG
@@ -702,7 +702,7 @@ bool cardRead (u32 dma,  u32 src, void *dst, u32 len) {
 
 	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
 	//ndmaUsed = false;
-	fileRead(dst,romFile,src,len,2);
+	fileRead(dst,*romFile,src,len,2);
 	//ndmaUsed = true;
 	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
 
