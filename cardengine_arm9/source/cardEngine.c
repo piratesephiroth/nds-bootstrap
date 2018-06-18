@@ -35,14 +35,12 @@ extern u32 consoleModel;
 #define _768KB_READ_SIZE 0xC0000
 #define _1MB_READ_SIZE 0x100000
 
-#define _CACHE_ADRESS_START 0x0C480000
-#define _CACHE_ADRESS_SIZE 0x360000
-#define _128KB_CACHE_SLOTS 0x1B
-#define _192KB_CACHE_SLOTS 0x12
-#define _256KB_CACHE_SLOTS 0xD
-#define _512KB_CACHE_SLOTS 0x6
-#define _768KB_CACHE_SLOTS 0x4
-#define _1MB_CACHE_SLOTS 0x3
+#define retail_CACHE_ADRESS_START 0x0C480000
+#define retail_CACHE_ADRESS_SIZE 0x360000
+#define retail_CACHE_SLOTS 0x1B
+#define dev_CACHE_ADRESS_START 0x0D000000
+#define dev_CACHE_ADRESS_SIZE 0x1000000
+#define dev_CACHE_SLOTS 0x80
 
 vu32* volatile cardStruct = 0x0C807BC0;
 //extern vu32* volatile cacheStruct;
@@ -51,9 +49,12 @@ extern u32 needFlushDCCache;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
 extern volatile int (*readCachedRef)(u32*); // this pointer is not at the end of the table but at the handler pointer corresponding to the current irq
 
-static u32 cacheDescriptor [_128KB_CACHE_SLOTS] = {0xffffffff};
-static u32 cacheCounter [_128KB_CACHE_SLOTS];
+static u32 cacheDescriptor [dev_CACHE_SLOTS] = {0xffffffff};
+static u32 cacheCounter [dev_CACHE_SLOTS];
 static u32 accessCounter = 0;
+
+static u32 cacheAddress = retail_CACHE_ADRESS_START;
+static u16 cacheSlots = retail_CACHE_SLOTS;
 
 static u32 cacheReadSizeSubtract = 0;
 
@@ -100,7 +101,7 @@ void setExceptionHandler2() {
 int allocateCacheSlot() {
 	int slot = 0;
 	u32 lowerCounter = accessCounter;
-	for(int i=0; i<_128KB_CACHE_SLOTS; i++) {
+	for(int i=0; i<cacheSlots; i++) {
 		if(cacheCounter[i]<=lowerCounter) {
 			lowerCounter = cacheCounter[i];
 			slot = i;
@@ -111,7 +112,7 @@ int allocateCacheSlot() {
 }
 
 int getSlotForSector(u32 sector) {
-	for(int i=0; i<_128KB_CACHE_SLOTS; i++) {
+	for(int i=0; i<cacheSlots; i++) {
 		if(cacheDescriptor[i]==sector) {
 			return i;
 		}
@@ -121,7 +122,7 @@ int getSlotForSector(u32 sector) {
 
 
 vu8* getCacheAddress(int slot) {
-	return (vu32*)(_CACHE_ADRESS_START+slot*_128KB_READ_SIZE);
+	return (vu32*)(cacheAddress+slot*_128KB_READ_SIZE);
 }
 
 void updateDescriptor(int slot, u32 sector) {
@@ -153,6 +154,11 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 	if(!flagsSet) {
 		setExceptionHandler2();
+		
+		if (consoleModel > 0) {
+			cacheAddress = dev_CACHE_ADRESS_START;
+			cacheSlots = dev_CACHE_SLOTS;
+		}
 
 		if(dsiMode) {
 			REG_SCFG_EXT = 0x8307F100;
