@@ -647,6 +647,8 @@ void arm7_main (void) {
 		return -1;
 	}
 
+    buildFatTableCache(romFile, 3);
+
 	int errorCode;
 
 	if (REG_SCFG_EXT == 0 || ntrTouch) {
