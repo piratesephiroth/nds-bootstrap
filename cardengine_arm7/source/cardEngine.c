@@ -605,7 +605,7 @@ bool eepromRead (u32 src, void *dst, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-	fileRead(dst,savFile,src,len,1);
+	fileRead(dst,savFile,src,len,-1);
 
 	return true;
 }
@@ -624,7 +624,7 @@ bool eepromPageWrite (u32 dst, const void *src, u32 len) {
 
 	saveInProgress = true;
 	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	fileWrite(src,savFile,dst,len,1);
+	fileWrite(src,savFile,dst,len,-1);
 	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
 	saveInProgress = false;
 
@@ -645,7 +645,7 @@ bool eepromPageProg (u32 dst, const void *src, u32 len) {
 
 	saveInProgress = true;
 	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	fileWrite(src,savFile,dst,len,1);
+	fileWrite(src,savFile,dst,len,-1);
 	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
 	saveInProgress = false;
 
@@ -665,7 +665,7 @@ bool eepromPageVerify (u32 dst, const void *src, u32 len) {
 	#endif	
 
 	//i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	//fileWrite(src,savFile,dst,len,1);
+	//fileWrite(src,savFile,dst,len,-1);
 	//i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
 	return true;
 }
