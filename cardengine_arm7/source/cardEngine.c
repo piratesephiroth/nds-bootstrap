@@ -355,10 +355,10 @@ void myIrqHandlerFIFO(void) {
 }
 
 //---------------------------------------------------------------------------------
-void myIrqHandlerHalt(void) {
+void mySwiHalt(void) {
 //---------------------------------------------------------------------------------
 	#ifdef DEBUG		
-	nocashMessage("myIrqHandlerHalt");
+	nocashMessage("mySwiHalt");
 	#endif	
 	
 	calledViaIPC = false;

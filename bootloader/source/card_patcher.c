@@ -36,6 +36,7 @@ u32 j_HaltSignature5[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB2DB};
 u32 j_HaltSignature5Alt1[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB51F};
 u32 j_HaltSignature5Alt2[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB5E3};
 u32 j_HaltSignature5Alt3[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB6FB};
+u32 j_HaltSignatureThumb5[2] = {0x4718004B, 0x037FB463};
 
 u32 swi12Signature[1] = {0x4770DF12};	// LZ77UnCompReadByCallbackWrite16bit
 u32 swiGetPitchTableSignature5[4] = {0x781A4B06, 0xD3030791, 0xD20106D1, 0x1A404904};
@@ -823,6 +824,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 
 void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 	u32* patches =  (u32*) cardEngineLocation[0];
+	bool isThumb = false;
 	u32 swiHaltOffset =   
 		getOffset((u32*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
 			  (u32*)j_HaltSignature5, 3, 1);
@@ -846,11 +848,22 @@ void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 	}
 	if (!swiHaltOffset) {
 		dbg_printf("swiHalt SDK5 call alt 3 not found\n");
+		isThumb = true;
+		swiHaltOffset =   
+			getOffset((u32*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
+				  (u32*)j_HaltSignatureThumb5, 2, 1);
+	}
+	if (!swiHaltOffset) {
+		dbg_printf("swiHalt SDK5 thumb call not found\n");
 	}
 	if (swiHaltOffset>0) {
 		dbg_printf("swiHalt call found\n");
-		u32* swiHaltPatch = (u32*) patches[11];
-		copyLoop ((u32*)swiHaltOffset, swiHaltPatch, 0xC);
+		u32* swiHaltPatch = (u32*) patches[12-isThumb];
+		if (isThumb) {
+			copyLoop ((u32*)swiHaltOffset, swiHaltPatch, 0x8);
+		} else {
+			copyLoop ((u32*)swiHaltOffset, swiHaltPatch, 0xC);
+		}
 	}
 }
 
@@ -878,7 +891,7 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 		if (!swiGetPitchTableOffset) {
 			dbg_printf("swiGetPitchTable call not found\n");
 		} else {
-			u32* swiGetPitchTablePatch = (u32*) patches[12];
+			u32* swiGetPitchTablePatch = (u32*) patches[13];
 			copyLoop ((u32*)swiGetPitchTableOffset, swiGetPitchTablePatch, 0xC);
 			dbg_printf("swiGetPitchTable call found\n");
 		}
