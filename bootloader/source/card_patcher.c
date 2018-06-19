@@ -708,9 +708,17 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
         dbg_printf("Relocation start not found\n");
 		return 0;
     }
+    
+    // Find the second relocation signature
+    u32 relocationStart = getOffset((u32*)relocationStart, ndsHeader->arm7binarySize-relocationStart,
+        relocateStartSignature, 1, 1);
+    if (!relocationStart) {
+        dbg_printf("Relocation start 2nd signature not found\n");
+		return 0;
+    }
 
 	// Validate the relocation signature
-    u32 forwardedRelocStartAddr = relocationStart + 4;
+    u32 forwardedRelocStartAddr = relocationStart + 0x20;
     if (!*(u32*)forwardedRelocStartAddr)
         forwardedRelocStartAddr += 4;
     u32 vAddrOfRelocSrc =
