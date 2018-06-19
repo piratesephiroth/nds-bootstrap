@@ -24,7 +24,7 @@
 #include "debugToFile.h"
 
 // Subroutine function signatures arm7
-u32 relocateStartSignature[1]  = {0x02FFFFFA};
+u32 relocateStartSignature[1]  = {0x3381C0DE,0}; //  33 81 C0 DE  DE C0 81 33 00 00 00 00 is the marker for the beggining of the relocated area :-)
 u32 a7cardReadSignature[2]     = {0x04100010,0x040001A4};
 u32 a7something1Signature[2]   = {0xE350000C,0x908FF100};
 u32 a7something2Signature[2]   = {0x0000A040,0x040001A0};
@@ -708,23 +708,11 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
         dbg_printf("Relocation start not found\n");
 		return 0;
     }
-    
-    // Find the second relocation signature
-    relocationStart = getOffset((u32*)relocationStart, ndsHeader->arm7binarySize-relocationStart,
-        relocateStartSignature, 1, 1);
-    if (!relocationStart) {
-        dbg_printf("Relocation start 2nd signature not found\n");
-		return 0;
-    }
 
 	// Validate the relocation signature
-    u32 forwardedRelocStartAddr = relocationStart + 0x20;
-    if (!*(u32*)forwardedRelocStartAddr)
-        forwardedRelocStartAddr += 4;
-    u32 vAddrOfRelocSrc =
-        *(u32*)(forwardedRelocStartAddr + 8);
+    u32 vAddrOfRelocSrc = relocationStart + 0x8;
     // sanity checks
-    u32 relocationCheck1 =
+    /*u32 relocationCheck1 =
         *(u32*)(forwardedRelocStartAddr + 0xC);
     u32 relocationCheck2 =
         *(u32*)(forwardedRelocStartAddr + 0x10);
@@ -732,31 +720,10 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
       || vAddrOfRelocSrc != relocationCheck2) {
         dbg_printf("Error in relocation checking\n");
 		return 0;
-    }
-
-
-    // Get the remaining details regarding relocation
-    u32 valueAtRelocStart =
-        *(u32*)forwardedRelocStartAddr;
-    u32 relocDestAtSharedMem =
-        *(u32*)valueAtRelocStart;
-    if (relocDestAtSharedMem != 0x37F8000) { // shared memory in RAM
-        // Try again
-        vAddrOfRelocSrc +=
-            *(u32*)(valueAtRelocStart + 4);
-        relocDestAtSharedMem =
-            *(u32*)(valueAtRelocStart + 0xC);
-        if (relocDestAtSharedMem != 0x37F8000) {
-            dbg_printf("Error in finding shared memory relocation area\n");
-			return 0;
-        }
-    }
+    }*/
 
     dbg_printf("Relocation src: ");
 	dbg_hexa(vAddrOfRelocSrc);
-	dbg_printf("\n");
-	dbg_printf("Relocation dst: ");
-	dbg_hexa(relocDestAtSharedMem);
 	dbg_printf("\n");
 
     u32 JumpTableFunc = getOffset((u32*)ndsHeader->arm7destination, ndsHeader->arm7binarySize,
@@ -782,7 +749,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_printf("Eeprom read:\t");
 		dbg_hexa((u32)eepromRead);
 		dbg_printf("\n");
-		srcAddr = JumpTableFunc + 0xC  - vAddrOfRelocSrc + relocDestAtSharedMem ;
+		srcAddr = JumpTableFunc + 0xC  - vAddrOfRelocSrc + 0x37F8000 ;
 		u32 patchRead = generateA7Instr(srcAddr,
 			arm7Function[5]);
 		*eepromRead=patchRead;
@@ -791,7 +758,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_printf("Eeprom page write:\t");
 		dbg_hexa((u32)eepromPageWrite);
 		dbg_printf("\n");
-		srcAddr = JumpTableFunc + 0x24 - vAddrOfRelocSrc + relocDestAtSharedMem ;
+		srcAddr = JumpTableFunc + 0x24 - vAddrOfRelocSrc + 0x37F8000 ;
 		u32 patchWrite = generateA7Instr(srcAddr,
 			arm7Function[3]);
 		*eepromPageWrite=patchWrite;
@@ -800,7 +767,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_printf("Eeprom page prog:\t");
 		dbg_hexa((u32)eepromPageProg);
 		dbg_printf("\n");
-		srcAddr = JumpTableFunc + 0x3C - vAddrOfRelocSrc + relocDestAtSharedMem ;
+		srcAddr = JumpTableFunc + 0x3C - vAddrOfRelocSrc + 0x37F8000 ;
 		u32 patchProg = generateA7Instr(srcAddr,
 			arm7Function[4]);
 		*eepromPageProg=patchProg;
@@ -809,7 +776,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_printf("Eeprom verify:\t");
 		dbg_hexa((u32)eepromPageVerify);
 		dbg_printf("\n");
-		srcAddr =  JumpTableFunc + 0x54 - vAddrOfRelocSrc + relocDestAtSharedMem ;
+		srcAddr =  JumpTableFunc + 0x54 - vAddrOfRelocSrc + 0x37F8000 ;
 		u32 patchVerify = generateA7Instr(srcAddr,
 			arm7Function[2]);
 		*eepromPageVerify=patchVerify;
@@ -819,7 +786,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_printf("Eeprom page erase:\t");
 		dbg_hexa((u32)eepromPageErase);
 		dbg_printf("\n");
-		srcAddr = JumpTableFunc + 0x68 - vAddrOfRelocSrc + relocDestAtSharedMem ;
+		srcAddr = JumpTableFunc + 0x68 - vAddrOfRelocSrc + 0x37F8000 ;
 		u32 patchErase = generateA7Instr(srcAddr,
 			arm7Function[1]);
 		*eepromPageErase=patchErase; 
