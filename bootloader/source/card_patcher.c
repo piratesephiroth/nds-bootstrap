@@ -710,7 +710,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
     }
     
     // Find the second relocation signature
-    u32 relocationStart = getOffset((u32*)relocationStart, ndsHeader->arm7binarySize-relocationStart,
+    relocationStart = getOffset((u32*)relocationStart, ndsHeader->arm7binarySize-relocationStart,
         relocateStartSignature, 1, 1);
     if (!relocationStart) {
         dbg_printf("Relocation start 2nd signature not found\n");
