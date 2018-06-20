@@ -243,7 +243,7 @@ cacheRef:
 @---------------------------------------------------------------------------------
 swi02:
 @---------------------------------------------------------------------------------
-	swi	0x02
+	swi	#0x02
 	bx	lr
 @---------------------------------------------------------------------------------
 
@@ -373,8 +373,8 @@ saveCluster:
 .global tryLockMutex
 .type	tryLockMutex STT_FUNC
 tryLockMutex:
-adr     r1, mutex    
-mov r2, #1
+    adr r1, mutex    
+    mov r2, #1
     swp r0,r2, [r1]
     cmp r0, r2
     beq trymutex_fail	
@@ -390,12 +390,14 @@ mutex_exit:
 lockMutex:
   adr r1, mutex    
   mov r2, #1
-mutex_loop:
   swp r0,r2, [r1]
   cmp r0,r2
-  beq mutex_loop    
+  beq mutex_fail    
   mov r0, #1	
   bx  lr
+mutex_fail:
+  swi #0x60000
+  b lockMutex
 
 .global unlockMutex
 .type	unlockMutex STT_FUNC
