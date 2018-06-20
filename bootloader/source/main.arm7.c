@@ -88,6 +88,7 @@ extern unsigned long romread_LED;
 extern unsigned long gameSoftReset;
 
 static aFile * romFile = (aFile *)0x37D5000;
+static aFile * savFile = ((aFile *)0x37D5000)+1;
 
 bool dsiModeConfirmed = false;
 
@@ -648,6 +649,13 @@ void arm7_main (void) {
 	}
 
     buildFatTableCache(romFile, 3);
+    
+    *savFile = getFileFromCluster(saveFileCluster);
+    
+    if (romFile->firstCluster != CLUSTER_FREE)
+	{
+         buildFatTableCache(savFile, 3);
+	}
 
 	int errorCode;
 

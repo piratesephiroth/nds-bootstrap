@@ -31,6 +31,7 @@
 
 extern void* memcpy(const void * src0, void * dst0, int len0);	// Fixes implicit declaration @ line 126 & 136
 extern int tryLockMutex(void);					// Fixes implicit declaration @ line 145
+extern int lockMutex(void);					    // Fixes implicit declaration
 extern int unlockMutex(void);					// Fixes implicit declaration @ line 223
 
 static bool initialized = false;
@@ -49,18 +50,16 @@ extern u32 gameSoftReset;
 u32 numberToActivateRunViaHalt = 10;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
 static aFile * romFile = (aFile *)0x37D5000;
-static aFile savFile;
+static aFile * savFile = ((aFile *)0x37D5000)+1;
 
 static bool runViaHalt = false;
-static bool saveInProgress = false;
-static bool readInProgress = false;
 static int accessCounter = 0;
 
 static int softResetTimer = 0;
 
 bool ndmaUsed = false;
 
-void initLogging() {
+void initialize() {
 	if(!initialized) {
 		if (sdmmc_read16(REG_SDSTATUS0) != 0) {
 			sdmmc_init();
@@ -68,10 +67,10 @@ void initLogging() {
 		}
 		FAT_InitFiles(false, 3);
 		//romFile = getFileFromCluster(fileCluster);
-		if(saveCluster>0)
-			savFile = getFileFromCluster(saveCluster);
+		/*if(saveCluster>0)
+			*savFile = getFileFromCluster(saveCluster);
 		else
-			savFile.firstCluster = CLUSTER_FREE;
+			savFile->firstCluster = CLUSTER_FREE;*/
 		//buildFatTableCache(&romFile, 3);
 		#ifdef DEBUG		
 		aFile myDebugFile = getBootFileCluster ("NDSBTSRP.LOG", 3);
@@ -266,39 +265,33 @@ void runCardEngineCheck (void) {
 	#endif
 
 	if(tryLockMutex()) {
-		initLogging();
+		initialize();
 
 		//nocashMessage("runCardEngineCheck mutex ok");
 
-		if (*(vu32*)(0x027FFB14) != 0 && !readInProgress) {
+		if (*(vu32*)(0x027FFB14) != 0) {
 			if (accessCounter > numberToActivateRunViaHalt-1) {
 				accessCounter = numberToActivateRunViaHalt;
 				runViaHalt = true;
 			}
 			if(*(vu32*)(0x027FFB14) == (vu32)0x026ff800)
 			{
-				readInProgress = true;
 				log_arm9();
 				*(vu32*)(0x027FFB14) = 0;
-				readInProgress = false;
 			}
 
 			if(*(vu32*)(0x027FFB14) == (vu32)0x025FFB08)
 			{
-				readInProgress = true;
 				cardRead_arm9();
 				*(vu32*)(0x027FFB14) = 0;
 				accessCounter++;
-				readInProgress = false;
 			}
 
 			if(*(vu32*)(0x027FFB14) == (vu32)0x020ff800)
 			{
-				readInProgress = true;
 				asyncCardRead_arm9();
 				*(vu32*)(0x027FFB14) = 0;
 				accessCounter++;
-				readInProgress = false;
 			}
 		}
 		unlockMutex();
@@ -311,32 +304,28 @@ void runCardEngineCheckHalt (void) {
 	nocashMessage("runCardEngineCheckHalt");
 	#endif	
 
+    // lockMutex should be possible to be used here instead of tryLockMutex since the execution of irq is not blocked
+    // to be checked
 	if(tryLockMutex()) {
-		initLogging();
+		initialize();
 
 		//nocashMessage("runCardEngineCheck mutex ok");
 		if(*(vu32*)(0x027FFB14) == (vu32)0x026ff800)
 		{
-			//readInProgress = true;
 			log_arm9();
 			*(vu32*)(0x027FFB14) = 0;
-			//readInProgress = false;
 		}
 
 		if(*(vu32*)(0x027FFB14) == (vu32)0x025FFB08)
 		{
-			//readInProgress = true;
 			cardRead_arm9();
 			*(vu32*)(0x027FFB14) = 0;
-			//readInProgress = false;
 		}
 
 		if(*(vu32*)(0x027FFB14) == (vu32)0x020ff800)
 		{
-			//readInProgress = true;
 			asyncCardRead_arm9();
 			*(vu32*)(0x027FFB14) = 0;
-			//readInProgress = false;
 		}
 		unlockMutex();
 	}
@@ -388,14 +377,17 @@ void myIrqHandlerVBlank(void) {
 	}
 
 	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_START | KEY_SELECT)) {
-	} else if (!saveInProgress && !gameSoftReset) {
-		if (dsiMode) {
-			memcpy((u32*)0x02000300,sr_data_srllastran_twltouch,0x020);
-		} else {
-			memcpy((u32*)0x02000300,sr_data_srllastran,0x020);
-		}
-		i2cWriteRegister(0x4a,0x70,0x01);
-		i2cWriteRegister(0x4a,0x11,0x01);	// Reboot game
+	} else if (!gameSoftReset) {
+        if(lockMutex()) {
+            if (dsiMode) {
+    			memcpy((u32*)0x02000300,sr_data_srllastran_twltouch,0x020);
+    		} else {
+    			memcpy((u32*)0x02000300,sr_data_srllastran,0x020);
+    		}
+    		i2cWriteRegister(0x4a,0x70,0x01);
+    		i2cWriteRegister(0x4a,0x11,0x01);	// Reboot game
+            unlockMutex();
+        }	
 	}
 
 	if (REG_SCFG_EXT == 0 || ntrTouch) {
@@ -569,7 +561,7 @@ u32 myIrqEnable(u32 irq) {
 void irqIPCSYNCEnable() {	
 	if(!initializedIRQ) {
 		int oldIME = enterCriticalSection();	
-		initLogging();	
+		initialize();	
 		#ifdef DEBUG		
 		dbg_printf("\nirqIPCSYNCEnable\n");	
 		#endif	
@@ -605,7 +597,11 @@ bool eepromRead (u32 src, void *dst, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-	fileRead(dst,savFile,src,len,-1);
+    //if(lockMutex()) {
+        initialize();
+        fileRead(dst,*savFile,src,len,-1);
+	//   unlockMutex();
+	//}
 
 	return true;
 }
@@ -622,11 +618,13 @@ bool eepromPageWrite (u32 dst, const void *src, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-	saveInProgress = true;
-	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	fileWrite(src,savFile,dst,len,-1);
-	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
-	saveInProgress = false;
+    //if(lockMutex()) {
+        initialize();
+    	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
+    	fileWrite(src,*savFile,dst,len,-1);
+    	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
+        //unlockMutex();
+    //}
 
 	return true;
 }
@@ -643,12 +641,14 @@ bool eepromPageProg (u32 dst, const void *src, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-	saveInProgress = true;
-	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-	fileWrite(src,savFile,dst,len,-1);
-	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
-	saveInProgress = false;
-
+	//if(lockMutex()) {
+        initialize();
+    	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
+    	fileWrite(src,*savFile,dst,len,-1);
+    	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
+    	//unlockMutex();
+    //}
+    
 	return true;
 }
 
@@ -674,6 +674,8 @@ bool eepromPageErase (u32 dst) {
 	#ifdef DEBUG	
 	dbg_printf("\narm7 eepromPageErase\n");	
 	#endif	
+    
+    // TODO : this should be implemented?
 
 	return true;
 }
@@ -681,7 +683,9 @@ bool eepromPageErase (u32 dst) {
 u32 cardId (void) {
 	#ifdef DEBUG	
 	dbg_printf("\cardId\n");
-	#endif	
+	#endif
+    
+    // TODO : this should be implemented?	
 
 	return	1;
 }
@@ -698,13 +702,19 @@ bool cardRead (u32 dma,  u32 src, void *dst, u32 len) {
 	dbg_hexa((u32)dst);
 	dbg_printf("\nlen : \n");
 	dbg_hexa(len);
-	#endif	
+	#endif
+    
+    	
 
-	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
-	//ndmaUsed = false;
-	fileRead(dst,*romFile,src,len,2);
-	//ndmaUsed = true;
-	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
+    //if(lockMutex()) {
+    	initialize();
+    	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
+    	//ndmaUsed = false;
+    	fileRead(dst,*romFile,src,len,2);
+    	//ndmaUsed = true;
+    	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
+        //unlockMutex();
+    //}
 
 	return true;
 }
