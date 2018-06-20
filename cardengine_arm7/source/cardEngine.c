@@ -306,7 +306,7 @@ void runCardEngineCheckHalt (void) {
 
     // lockMutex should be possible to be used here instead of tryLockMutex since the execution of irq is not blocked
     // to be checked
-	if(tryLockMutex()) {
+	if(lockMutex()) {
 		initialize();
 
 		//nocashMessage("runCardEngineCheck mutex ok");
@@ -340,7 +340,7 @@ void myIrqHandlerFIFO(void) {
 	
 	calledViaIPC = true;
 	
-	if (!runViaHalt) runCardEngineCheck();
+	/*if (!runViaHalt)*/ runCardEngineCheck();
 }
 
 //---------------------------------------------------------------------------------
@@ -352,9 +352,9 @@ void mySwiHalt(void) {
 	
 	calledViaIPC = false;
 	
-	if (runViaHalt) {
+	//if (runViaHalt) {
 		runCardEngineCheckHalt();
-	}
+	//}
 }
 
 
