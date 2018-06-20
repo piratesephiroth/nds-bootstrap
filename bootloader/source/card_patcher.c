@@ -81,6 +81,7 @@ u32 aRandomPatch2[3] = {0xE59F003C,0xE590001C,0xE3500000};
 // irqEnable
 u32 irqEnableStartSignature1[4] = {0xE59FC028,0xE1DC30B0,0xE3A01000,0xE1CC10B0};
 u32 irqEnableStartSignature4[4] = {0xE92D4010, 0xE1A04000, 0xEBFFFFF6, 0xE59FC020};
+u32 irqEnableStartSignature4alt[4] = {0xE92D4010, 0xE1A04000, 0xEBFFFFE9, 0xE59FC020};
 
 //u32 arenaLowSignature[4] = {0xE1A00100,0xE2800627,0xE2800AFF,0xE5801DA0};  
 
@@ -665,7 +666,10 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
               (u32*)irqEnableStartSignature, 4, 1);
     if (!cardIrqEnableOffset) {
         dbg_printf("irq enable not found\n");
-        return 0;
+        irqEnableStartSignature=irqEnableStartSignature4alt;
+        cardIrqEnableOffset =   
+        getOffset((u32*)ndsHeader->arm7destination, 0x00400000,//, ndsHeader->arm9binarySize,
+              (u32*)irqEnableStartSignature, 4, 1);
     }
 	debug[0] = cardIrqEnableOffset;
     dbg_printf("irq enable found\n");
