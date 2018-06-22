@@ -287,14 +287,12 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 		dbg_hexa(cardReadDmaEndOffset);
 		dbg_printf("\n");
 		if (usesThumb) {
+			//dbg_printf("Card read dma start not found\n");
+			cardReadDmaOffset =   
+				getOffset((u32*)cardReadDmaEndOffset, -0x100,
+					  (u32*)cardReadDmaStartSignatureThumb, 1, -1);
 			if (!cardReadDmaOffset) {
-				//dbg_printf("Card read dma start not found\n");
-				cardReadDmaOffset =   
-					getOffset((u32*)cardReadDmaEndOffset, -0x100,
-						  (u32*)cardReadDmaStartSignatureThumb, 1, -1);
-				if (!cardReadDmaOffset) {
-					dbg_printf("Thumb card read dma start not found\n");
-				}
+				dbg_printf("Thumb card read dma start not found\n");
 			}
 		} else {
 			cardReadDmaOffset =   
