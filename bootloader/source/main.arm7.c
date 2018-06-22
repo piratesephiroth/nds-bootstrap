@@ -659,7 +659,7 @@ void arm7_main (void) {
 
 	int errorCode;
 
-	if (REG_SCFG_EXT == 0 || ntrTouch) {
+	if (REG_SCFG_EXT == 0 || ntrTouch == 1) {
 		NDSTouchscreenMode();
 		*(u16*)(0x4000500) = 0x807F;
 	}

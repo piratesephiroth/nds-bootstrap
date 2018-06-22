@@ -396,7 +396,7 @@ void myIrqHandlerVBlank(void) {
         }	
 	}
 
-	if (REG_SCFG_EXT == 0 || ntrTouch) {
+	if (REG_SCFG_EXT == 0 || ntrTouch == 1) {
 		// Control volume with the - and + buttons.
 		u8 volLevel;
 		u8 i2cVolLevel = i2cReadRegister(0x4A, 0x40);
