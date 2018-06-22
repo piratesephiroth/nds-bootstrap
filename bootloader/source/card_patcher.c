@@ -46,11 +46,12 @@ u32 moduleParamsSignature[2]   = {0xDEC00621, 0x2106C0DE};
 
 // sdk 5 version
 u32 a9cardReadSignature5[2]    = {0x04100010, 0x040001A4};
-u32 a9cardReadSignatureThumb5[2]    = {0x040001A4, 0x04100010};
+u32 a9cardReadSignatureThumb5[2]    = {0x040001A4, 0xFFFFFE00};
 u32 cardReadStartSignature5[1] = {0xE92D4FF8};
-u32 cardReadStartSignatureThumb5[1] = {0x0A0AB4F0};
+u32 cardReadStartSignatureThumb5[1] = {0xB086B5F8};
 
 u32 a9cardIdSignature[2]      = {0x04100010,0xE92D4038};
+u32 a9cardIdSignatureThumb[4]    = {0x02FFFAE0, 0xF8FFFFFF, 0x040001A4, 0x04100010};
 u32 cardIdStartSignature[2]   = {0xE92D4010,0xE3A050B8};
 u32 cardIdStartSignatureAlt[1]   = {0xE92D4038};
 u32 cardIdStartSignatureAlt2[1]   = {0xE92D4010};
@@ -209,21 +210,21 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
               (u32*)a9cardReadSignature, 2, 1);
     if (!cardReadEndOffset) {
         dbg_printf("Card read end not found\n");
-		//cardReadEndOffset =  
-		//	getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
-		//		(u32*)a9cardReadSignatureThumb, 2, 1);
-		//if (!cardReadEndOffset) {
-		//	dbg_printf("Thumb card read end not found\n");
+		cardReadEndOffset =  
+			getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
+				(u32*)a9cardReadSignatureThumb, 2, 1);
+		if (!cardReadEndOffset) {
+			dbg_printf("Thumb card read end not found\n");
 			return 0;
-		//} else {
-		//	usesThumb = true;
-		//}
+		} else {
+			usesThumb = true;
+		}
     }
 	debug[1] = cardReadEndOffset;
     u32 cardReadStartOffset = 0;
 	if (usesThumb) {
 		cardReadStartOffset =   
-			getOffset((u32*)cardReadEndOffset, -0xF0,
+			getOffset((u32*)cardReadEndOffset, -0xD0,
 				  (u32*)cardReadStartSignatureThumb, 1, -1);
 		if (!cardReadStartOffset) {
 			dbg_printf("Card read start not found\n");
@@ -313,47 +314,55 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
         getOffset((u32*)cardReadEndOffset+0x10, ndsHeader->arm9binarySize,
               (u32*)a9cardIdSignature, 2, 1);
 			  
-	if(!cardIdEndOffset){
+	if(!cardIdEndOffset && !usesThumb){
 		cardIdEndOffset =  
         getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize,
               (u32*)a9cardIdSignature, 2, 1);
+	}
+	if(!cardIdEndOffset && usesThumb){
+		cardIdEndOffset =  
+        getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize,
+              (u32*)a9cardIdSignatureThumb, 4, 1);
 	}
     if (!cardIdEndOffset) {
         dbg_printf("Card id end not found\n");
     } else {
 		debug[1] = cardIdEndOffset;
-		cardIdStartOffset =   
-			getOffset((u32*)cardIdEndOffset, -0x100,
-				  (u32*)cardIdStartSignature, 2, -1);
-		if (!cardIdStartOffset) {
-		cardIdStartOffset =   
-			getOffset((u32*)cardIdEndOffset, -0x100,
-				  (u32*)cardIdStartSignatureAlt, 1, -1);
-		}
-		if (!cardIdStartOffset) {
-		cardIdStartOffset =   
-			getOffset((u32*)cardIdEndOffset, -0x100,
-				  (u32*)cardIdStartSignatureAlt2, 1, -1);
-		}
-		if (!cardIdStartOffset) {
-		cardIdStartOffset =   
-			getOffset((u32*)cardIdEndOffset, -0x100,
-				  (u32*)cardIdStartSignatureThumb, 1, -1);
-		}
-		if (!cardIdStartOffset) {
-		cardIdStartOffset =   
-			getOffset((u32*)cardIdEndOffset, -0x100,
-				  (u32*)cardIdStartSignatureThumbAlt, 1, -1);
-		}
-		if (!cardIdStartOffset) {
-		cardIdStartOffset =   
-			getOffset((u32*)cardIdEndOffset, -0x100,
-				  (u32*)cardIdStartSignatureThumbAlt2, 1, -1);
-		}
-		if (!cardIdStartOffset) {
-		cardIdStartOffset =   
-			getOffset((u32*)cardIdEndOffset, -0x100,
-				  (u32*)cardIdStartSignatureThumbAlt3, 1, -1);
+		if (usesThumb) {
+			if (!cardIdStartOffset) {
+			cardIdStartOffset =   
+				getOffset((u32*)cardIdEndOffset, -0x100,
+					  (u32*)cardIdStartSignatureThumb, 1, -1);
+			}
+			if (!cardIdStartOffset) {
+			cardIdStartOffset =   
+				getOffset((u32*)cardIdEndOffset, -0x100,
+					  (u32*)cardIdStartSignatureThumbAlt, 1, -1);
+			}
+			if (!cardIdStartOffset) {
+			cardIdStartOffset =   
+				getOffset((u32*)cardIdEndOffset, -0x100,
+					  (u32*)cardIdStartSignatureThumbAlt2, 1, -1);
+			}
+			if (!cardIdStartOffset) {
+			cardIdStartOffset =   
+				getOffset((u32*)cardIdEndOffset, -0x100,
+					  (u32*)cardIdStartSignatureThumbAlt3, 1, -1);
+			}
+		} else {
+			cardIdStartOffset =   
+				getOffset((u32*)cardIdEndOffset, -0x100,
+					  (u32*)cardIdStartSignature, 2, -1);
+			if (!cardIdStartOffset) {
+			cardIdStartOffset =   
+				getOffset((u32*)cardIdEndOffset, -0x100,
+					  (u32*)cardIdStartSignatureAlt, 1, -1);
+			}
+			if (!cardIdStartOffset) {
+			cardIdStartOffset =   
+				getOffset((u32*)cardIdEndOffset, -0x100,
+					  (u32*)cardIdStartSignatureAlt2, 1, -1);
+			}
 		}
 		if (!cardIdStartOffset) {
 			dbg_printf("Card id start not found\n");
@@ -410,12 +419,7 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	debug[5] = patches;
 
-	u32* card_struct = 0;
-	if (usesThumb) {
-		card_struct = ((u32*)cardReadEndOffset) - 2;
-	} else {
-		card_struct = ((u32*)cardReadEndOffset) - 1;
-	}
+	u32* card_struct = ((u32*)cardReadEndOffset) - 1;
 	//u32* cache_struct = ((u32*)cardIdStartOffset) - 1;
 
 	debug[6] = *card_struct;
@@ -434,7 +438,7 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	//copyLoop (oldArenaLow, cardReadPatch, 0xF0);
 
 	if (usesThumb) {
-		copyLoop ((u32*)cardReadStartOffset, cardReadPatch, 0x60);
+		copyLoop ((u32*)cardReadStartOffset, cardReadPatch, 0xB0);
 	} else {
 		copyLoop ((u32*)cardReadStartOffset, cardReadPatch, 0xF0);
 	}
@@ -454,11 +458,11 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 		dbg_hexa(cardReadDmaOffset);
 		dbg_printf("\n");
 
-		if (usesThumb) {
-			copyLoop ((u32*)cardReadDmaOffset, cardDmaPatch, 0x4);
-		} else {
+		//if (usesThumb) {
+		//	copyLoop ((u32*)cardReadDmaOffset, cardDmaPatch, 0x4);
+		//} else {
 			copyLoop ((u32*)cardReadDmaOffset, cardDmaPatch, 0x8);
-		}
+		//}
 	}
 
 	dbg_printf("ERR_NONE");

@@ -148,13 +148,13 @@ cacheRef:
 @---------------------------------------------------------------------------------
 thumb_card_read_arm9:
 @---------------------------------------------------------------------------------
-    push	{r4-r7}
+    push	{r3-r7, lr}
 
 	ldr		r6, =cardRead+1
 
 	bl		_blx_r3_stub_thumb_card_read	
 
-    pop	{r4-r7}
+    pop	{r3-r7, pc}
     bx      lr
 _blx_r3_stub_thumb_card_read:
 	bx	r6	
