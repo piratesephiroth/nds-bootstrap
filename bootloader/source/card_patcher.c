@@ -447,7 +447,7 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	if (cardIdStartOffset) {
 		if (usesThumb) {
-			copyLoop ((u32*)cardIdStartOffset, cardIdPatch, 0x4);
+			//copyLoop ((u32*)cardIdStartOffset, cardIdPatch, 0x4);
 		} else {
 			copyLoop ((u32*)cardIdStartOffset, cardIdPatch, 0x8);
 		}
