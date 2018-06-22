@@ -540,7 +540,7 @@ void myIrqHandlerVBlank(void) {
 		REG_MASTER_VOLUME = volLevel;
 	}
 
-	if (!runViaHalt) runCardEngineCheck();
+	/* if (!runViaHalt) */ runCardEngineCheck();
     
 	#ifdef DEBUG		
 	nocashMessage("cheat_engine_start\n");
