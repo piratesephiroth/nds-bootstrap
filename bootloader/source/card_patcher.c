@@ -64,9 +64,6 @@ u32 cardIdStartSignatureThumbAlt3[1]   = {0x24B8B510};
 u32 cardPullOutSignature5[4]   = {0xE92D4038,0xE201003F,0xE3500011,0x1A000011};
 //u32 a9cardSendSignature[7]    = {0xE92D40F0,0xE24DD004,0xE1A07000,0xE1A06001,0xE1A01007,0xE3A0000E,0xE3A02000};
 u32 cardCheckPullOutSignature1[4]   = {0xE92D4018,0xE24DD004,0xE59F204C,0xE1D210B0};
-
-u32 cardReadCachedStartSignature4[2]   = {0xE92D4038,0xE59F407C};
-u32 cardReadCachedEndSignature4[4]   = {0xE5940024,0xE3500000,0x13A00001,0x03A00000};
    
 u32 cardReadDmaStartSignature[1]   = {0xE92D43F8};
 u32 cardReadDmaStartSignatureAlt[1]   = {0xE92D47F0};
@@ -198,8 +195,6 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	u32* cardReadStartSignature = cardReadStartSignature5;
 	u32* cardReadStartSignatureThumb = cardReadStartSignatureThumb5;
 	u32* cardPullOutSignature = cardPullOutSignature5;
-	u32* cardReadCachedStartSignature = cardReadCachedStartSignature4;
-	u32* cardReadCachedEndSignature = cardReadCachedEndSignature4;
 
 	u32 needFlushCache = 0;
 
@@ -256,25 +251,6 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 		dbg_hexa(cardPullOutOffset);
 		dbg_printf("\n");
 	}
-
-
-    u32 cardReadCachedEndOffset =  
-        getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
-              (u32*)cardReadCachedEndSignature, 4, 1);
-    if (!cardReadCachedEndOffset) {
-        dbg_printf("Card read cached end not found\n");
-        //return 0;
-    }
-    u32 cardReadCachedOffset =   
-        getOffset((u32*)cardReadCachedEndOffset, -0xFF,
-              (u32*)cardReadCachedStartSignature, 2, -1);
-    if (!cardReadStartOffset) {
-        dbg_printf("Card read cached start not found\n");
-        //return 0;
-    }
-	dbg_printf("Card read cached :\t");
-	dbg_hexa(cardReadCachedOffset);
-	dbg_printf("\n");
 
 	u32 cardReadDmaOffset = 0;
 	u32 cardReadDmaEndOffset =  
@@ -443,7 +419,6 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	*((u32*)patches[5]) = ((u32*)*card_struct)+7;
 
 	*((u32*)patches[7]) = cardPullOutOffset+4;
-	*((u32*)patches[8]) = cardReadCachedOffset;
 	patches[10] = needFlushCache;
 
 	//copyLoop (oldArenaLow, cardReadPatch, 0xF0);
