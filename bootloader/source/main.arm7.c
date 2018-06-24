@@ -82,7 +82,6 @@ extern unsigned long dsiMode;
 extern unsigned long patchMpuRegion;
 extern unsigned long patchMpuSize;
 extern unsigned long consoleModel;
-extern unsigned long ntrTouch;
 extern unsigned long loadingScreen;
 extern unsigned long romread_LED;
 extern unsigned long gameSoftReset;
@@ -659,7 +658,7 @@ void arm7_main (void) {
 
 	int errorCode;
 
-	if (REG_SCFG_EXT == 0 || ntrTouch == 1) {
+	if (REG_SCFG_EXT == 0) {
 		NDSTouchscreenMode();
 		*(u16*)(0x4000500) = 0x807F;
 	}

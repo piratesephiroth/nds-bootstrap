@@ -69,7 +69,7 @@ void dopause() {
 	scanKeys();
 }
 
-void runFile(string filename, string savPath, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 consoleModel, u32 ntrTouch, u32 loadingScreen, u32 romread_LED, u32 gameSoftReset, u32* cheat_data) {
+void runFile(string filename, string savPath, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 consoleModel, u32 loadingScreen, u32 romread_LED, u32 gameSoftReset, u32* cheat_data) {
 	vector<char*> argarray;
 
 	if(debug)
@@ -128,7 +128,6 @@ void runFile(string filename, string savPath, u32 dsiMode, u32 patchMpuRegion, u
 							patchMpuRegion,
 							patchMpuSize,
 							consoleModel,
-							ntrTouch,
 							loadingScreen,
 							romread_LED,
 							gameSoftReset,
@@ -291,7 +290,6 @@ int main( int argc, char **argv) {
 				patchMpuRegion,
 				patchMpuSize,
 				bootstrapini.GetInt( "NDS-BOOTSTRAP", "CONSOLE_MODEL", 0),
-				bootstrapini.GetInt( "NDS-BOOTSTRAP", "NTR_TOUCH", 0),
 				bootstrapini.GetInt( "NDS-BOOTSTRAP", "LOADING_SCREEN", 1),
 				romread_LED,
 				bootstrapini.GetInt( "NDS-BOOTSTRAP", "GAME_SOFT_RESET", 0),
