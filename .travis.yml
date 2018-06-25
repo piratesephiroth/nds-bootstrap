@@ -1,0 +1,48 @@
+language: cpp
+
+os: linux
+sudo: false
+dist: trusty
+
+env:
+  global:
+    - DEVKITPRO=/opt/devkitpro    
+    - DEVKITARM=/opt/devkitpro/devkitARM
+    
+cache:
+  directories:
+    - "$HOME/.local"
+    - "$DEVKITPRO"
+
+before_install:
+  - curl -L https://github.com/devkitPro/pacman/releases/download/devkitpro-pacman-1.0.1/devkitpro-pacman.deb -o pacman.deb
+
+install:
+  - sudo dpkg -i pacman.deb
+  - sudo dkp-pacman -Sy
+  - sudo dkp-pacman -S devkitARM general-tools dstools ndstool libnds libfat-nds --noconfirm
+  - export DEVKITPRO=/opt/devkitpro
+  - export DEVKITARM=${DEVKITPRO}/devkitARM
+
+script:
+  - make
+  
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.9
+    - g++-4.9
+    - libstdc++6
+    - lftp
+
+after_success:
+  - >
+    if [ "$TRAVIS_BRANCH" == "master" ] || [ "$TRAVIS_BRANCH" == "sdk5" ] || [ "$TRAVIS_BRANCH" == "hb" ]; then
+        GITDATE="`git show -s --date=short --format='%ad' | sed 's/-//g'`"
+        GITREV="`git show -s --format='%h'`"
+        REV_NAME="nds-bootstrap-${TRAVIS_BRANCH}-${GITDATE}-${GITREV}.nds"
+        cp nds-bootstrap.nds $REV_NAME
+        lftp ftp://$FTP_LOGIN:$FTP_PASSWORD@$FTP_ADDR  -e "set net:timeout 5; set net:max-retries 2; put ${REV_NAME}; bye"
+    fi
