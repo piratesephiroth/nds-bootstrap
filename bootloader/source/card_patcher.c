@@ -75,6 +75,8 @@ u32 cardReadDmaEndSignature[2]   = {0x01FF8000,0x000001FF};
 
 u32 aRandomPatch[4] = {0xE92D43F8, 0xE3A04000, 0xE1A09001, 0xE1A08002};
 u32 aRandomPatch2[3] = {0xE59F003C,0xE590001C,0xE3500000};
+u32 sleepPatch[2] = {0x0A000001, 0xE3A00601}; 
+u32 sleepPatchThumb[2] = {0xD0024201,0xF7F60440}; 
 
  
 
@@ -717,8 +719,35 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 		irqEnableStartSignature = irqEnableStartSignature4;
 	}
 
+	bool usesThumb = false;
+
+	u32 sleepPatchOffset =   
+        getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
+              (u32*)sleepPatch, 2, 1);
+    if (!sleepPatchOffset) {
+        dbg_printf("sleep patch not found. Trying thumb\n");
+        //return 0;
+		usesThumb = true;
+    } else {
+		dbg_printf("sleep patch found\n");
+		*(u32*)(sleepPatchOffset+8) = 0;
+	}
+	if (usesThumb) {
+		sleepPatchOffset =   
+        getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
+              (u32*)sleepPatchThumb, 2, 1);
+		if (!sleepPatchOffset) {
+			dbg_printf("Thumb sleep patch not found\n");
+			//return 0;
+		} else {
+			dbg_printf("Thumb sleep patch found\n");
+			*(u16*)(sleepPatchOffset+6) = 0;
+			*(u16*)(sleepPatchOffset+8) = 0;
+		}
+	}
+
 	u32 cardCheckPullOutOffset =   
-        getOffset((u32*)ndsHeader->arm7destination, 0x00400000,//, ndsHeader->arm9binarySize,
+        getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
               (u32*)cardCheckPullOutSignature, 4, 1);
     if (!cardCheckPullOutOffset) {
         dbg_printf("Card check pull out not found\n");
@@ -729,13 +758,13 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	}
 
 	u32 cardIrqEnableOffset =   
-        getOffset((u32*)ndsHeader->arm7destination, 0x00400000,//, ndsHeader->arm9binarySize,
+        getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
               (u32*)irqEnableStartSignature, 4, 1);
     if (!cardIrqEnableOffset) {
         dbg_printf("irq enable not found\n");
         irqEnableStartSignature=irqEnableStartSignature4alt;
         cardIrqEnableOffset =   
-        getOffset((u32*)ndsHeader->arm7destination, 0x00400000,//, ndsHeader->arm9binarySize,
+        getOffset((u32*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
               (u32*)irqEnableStartSignature, 4, 1);
     }
 	debug[0] = cardIrqEnableOffset;
