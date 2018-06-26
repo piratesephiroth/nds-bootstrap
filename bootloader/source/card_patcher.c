@@ -128,7 +128,7 @@ u32 generateA7Instr(int arg1, int arg2) {
 
 u32 generateA7InstrThumb(int arg1, int arg2) {
     // 23 bit offset
-    u32 offset = (u32)(arg2 - arg1 - 8);
+    u32 offset = (u32)(arg2 - arg1 - 4);
     // 1st instruction contains the upper 11 bit of the offset
     u16 firstInstr = (( offset >> 13) & 0x7FF) | 0xF000;
 
@@ -542,17 +542,18 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 
 	u32* patches =  (u32*) cardEngineLocation[0];
 	u32* arm7Function =  (u32*) patches[9];
+    u32* arm7FunctionThumb =  (u32*) patches[14];
 	u32 srcAddr;
 
 	if (usesThumb) {
 
-		/* u32* eepromRead = (u32*) (JumpTableFunc + 0x8);
+		u32* eepromRead = (u32*) (JumpTableFunc + 0x8);
 		dbg_printf("Eeprom read:\t");
 		dbg_hexa((u32)eepromRead);
 		dbg_printf("\n");
 		srcAddr = JumpTableFunc + 0x8  - vAddrOfRelocSrc + 0x37F8000 ;
-		u32 patchRead = generateThumbA7Instr(srcAddr,
-			arm7Function[5]+1);
+		u32 patchRead = generateA7InstrThumb(srcAddr,
+			arm7FunctionThumb[5]+1);
 		*eepromRead=patchRead;
 
 		u32* eepromPageWrite = (u32*) (JumpTableFunc + 0x16);
@@ -560,8 +561,8 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_hexa((u32)eepromPageWrite);
 		dbg_printf("\n");
 		srcAddr = JumpTableFunc + 0x16 - vAddrOfRelocSrc + 0x37F8000 ;
-		u32 patchWrite = generateThumbA7Instr(srcAddr,
-			arm7Function[3]+1);
+		u32 patchWrite = generateA7InstrThumb(srcAddr,
+			arm7FunctionThumb[3]+1);
 		*eepromPageWrite=patchWrite;
 
 		u32* eepromPageProg = (u32*) (JumpTableFunc + 0x24);
@@ -569,8 +570,8 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_hexa((u32)eepromPageProg);
 		dbg_printf("\n");
 		srcAddr = JumpTableFunc + 0x24 - vAddrOfRelocSrc + 0x37F8000 ;
-		u32 patchProg = generateThumbA7Instr(srcAddr,
-			arm7Function[4]+1);
+		u32 patchProg = generateA7InstrThumb(srcAddr,
+			arm7FunctionThumb[4]+1);
 		*eepromPageProg=patchProg;
 
 		u32* eepromPageVerify = (u32*) (JumpTableFunc + 0x32);
@@ -578,8 +579,8 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_hexa((u32)eepromPageVerify);
 		dbg_printf("\n");
 		srcAddr =  JumpTableFunc + 0x32 - vAddrOfRelocSrc + 0x37F8000 ;
-		u32 patchVerify = generateThumbA7Instr(srcAddr,
-			arm7Function[2]+1);
+		u32 patchVerify = generateA7InstrThumb(srcAddr,
+			arm7FunctionThumb[2]+1);
 		*eepromPageVerify=patchVerify;
 
 
@@ -588,9 +589,9 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		dbg_hexa((u32)eepromPageErase);
 		dbg_printf("\n");
 		srcAddr = JumpTableFunc + 0x3E - vAddrOfRelocSrc + 0x37F8000 ;
-		u32 patchErase = generateThumbA7Instr(srcAddr,
-			arm7Function[1]+1);
-		*eepromPageErase=patchErase; */
+		u32 patchErase = generateA7InstrThumb(srcAddr,
+			arm7FunctionThumb[1]+1);
+		*eepromPageErase=patchErase;
 
 	} else {
 
