@@ -549,7 +549,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 
 	if (usesThumb) {
 
-		u32* eepromRead = (u32*) (JumpTableFunc + 0x8);
+		/*u32* eepromRead = (u32*) (JumpTableFunc + 0x8);
 		dbg_printf("Eeprom read:\t");
 		dbg_hexa((u32)eepromRead);
 		dbg_printf("\n");
@@ -593,7 +593,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		srcAddr = JumpTableFunc + 0x3E - vAddrOfRelocSrc + 0x37F8000 ;
 		u32 patchErase = generateA7InstrThumb(srcAddr,
 			arm7FunctionThumb[1]);
-		*eepromPageErase=patchErase;
+		*eepromPageErase=patchErase;*/
 
 	} else {
 
