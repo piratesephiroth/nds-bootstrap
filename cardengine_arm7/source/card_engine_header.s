@@ -251,7 +251,7 @@ swi02:
 @---------------------------------------------------------------------------------
 jThumb_newSwiHalt:
 @---------------------------------------------------------------------------------
-	ldr	r3, = newSwiHalt+1
+	ldr	r3, = newSwiHalt
 	bx	r3
 .pool
 @---------------------------------------------------------------------------------
@@ -383,35 +383,35 @@ arm7FunctionsThumb :
 
 	.thumb
 eepromProtectThumbStub:
-    ldr r0, =eepromProtect+1
+    ldr r0, =eepromProtect
     bx r0
     
 eepromPageEraseThumbStub:
-    ldr r0, =eepromPageErase+1
+    ldr r0, =eepromPageErase
     bx r0    
 
 eepromPageVerifyThumbStub:
-    ldr r0, =eepromPageVerify+1
+    ldr r0, =eepromPageVerify
     bx r0
     
 eepromPageWriteThumbStub:
-    ldr r0, =eepromPageWrite+1
+    ldr r0, =eepromPageWrite
     bx r0
     
 eepromPageProgThumbStub:
-    ldr r0, =eepromPageProg+1
+    ldr r0, =eepromPageProg
     bx r0
 
 cardReadThumbStub:
-    ldr r0, =cardRead+1
+    ldr r0, =cardRead
     bx r0
 
 eepromReadThumbStub:
-    ldr r0, =eepromRead+1
+    ldr r0, =eepromRead
     bx r0
     
 cardIdThumbStub:
-    ldr r0, =cardId+1
+    ldr r0, =cardId
     bx r0
 
     .pool
