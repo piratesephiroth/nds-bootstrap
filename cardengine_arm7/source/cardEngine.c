@@ -604,11 +604,11 @@ bool eepromRead (u32 src, void *dst, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-    //if(lockMutex()) {
-        initialize();
-        fileRead(dst,*savFile,src,len,-1);
-	//   unlockMutex();
-	//}
+    if (lockMutex(&saveMutex)) {
+		initialize();
+		fileRead(dst,*savFile,src,len,-1);
+        unlockMutex(&saveMutex);
+	}
 
 	return true;
 }
@@ -625,15 +625,13 @@ bool eepromPageWrite (u32 dst, const void *src, u32 len) {
 	dbg_hexa(len);
 	#endif	
     
-    initialize();
-    int oldIME = enterCriticalSection();	
     if (lockMutex(&saveMutex)) {
-        i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
+		initialize();
+    	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
         fileWrite(src,*savFile,dst,len,-1);
         i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
         unlockMutex(&saveMutex);
     }
-    leaveCriticalSection(oldIME);
 
 	return true;
 }
@@ -650,15 +648,13 @@ bool eepromPageProg (u32 dst, const void *src, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-    initialize();
-    int oldIME = enterCriticalSection();	
     if (lockMutex(&saveMutex)) {
+		initialize();
     	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
     	fileWrite(src,*savFile,dst,len,-1);
     	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
     	unlockMutex(&saveMutex);
     }
-    leaveCriticalSection(oldIME);
     
 	return true;
 }
@@ -717,15 +713,15 @@ bool cardRead (u32 dma,  u32 src, void *dst, u32 len) {
     
     	
 
-    //if(lockMutex()) {
+    if(lockMutex(&saveMutex)) {
     	initialize();
     	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
     	//ndmaUsed = false;
     	fileRead(dst,*romFile,src,len,2);
     	//ndmaUsed = true;
     	cardReadLED(false);    // After loading is done, turn off LED for card read indicator
-        //unlockMutex();
-    //}
+        unlockMutex(&saveMutex);
+    }
 
 	return true;
 }

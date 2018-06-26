@@ -45,9 +45,12 @@ volatile bool arm9_errorColor = false;
 volatile int arm9_screenMode = 0;	// 0 = Regular, 1 = Pong, 2 = Tic-Tac-Toe
 volatile int arm9_loadBarLength = 0;
 volatile bool arm9_animateLoadingCircle = false;
+volatile int screenBrightness = 31;
+volatile bool fadeType = true;
 
 static bool displayScreen = false;
 
+static int loadingCircleTime = 3;
 static int loadingCircleFrame = 0;
 static bool drawnStuff = false;
 
@@ -85,6 +88,17 @@ void initMBKARM9() {
 	REG_MBK7=0x07C03740; // same as dsiware
 	// WRAM-C mapped to the 0x3700000 - 0x373FFFF area : 256k
 	REG_MBK8=0x07403700; // same as dsiware
+}
+
+void SetBrightness(u8 screen, s8 bright) {
+	u16 mode = 1 << 14;
+
+	if (bright < 0) {
+		mode = 2 << 14;
+		bright = -bright;
+	}
+	if (bright > 31) bright = 31;
+	*(u16*)(0x0400006C + (0x1000 * screen)) = bright + mode;
 }
 
 /*-------------------------------------------------------------------------
@@ -479,8 +493,12 @@ static void arm9_loadingCircle (void) {
 			break;
 	}
 
-	// Draw loading circle (7 times, for slow animation)
-	for (i = 0; i < 7; i++) {
+	while(REG_VCOUNT!=191);
+
+	// Draw loading circle
+	if (loadingCircleTime == 3) {
+		loadingCircleTime = 0;
+
 		for (y = 64; y <= 87; y++) {
 			for (k = 88; k <= 111; k++) {
 				VRAM_A[y*256+k] = colour1;
@@ -514,10 +532,12 @@ static void arm9_loadingCircle (void) {
 				VRAM_A[y*256+k] = colour5;
 			}
 		}
+
+		loadingCircleFrame++;
+		if(loadingCircleFrame==8) loadingCircleFrame = 0;
+	} else {
+		loadingCircleTime++;
 	}
-	
-	loadingCircleFrame++;
-	if(loadingCircleFrame==8) loadingCircleFrame = 0;
 }
 
 static void arm9_errorText (void) {
@@ -1282,6 +1302,9 @@ void arm9_main (void)
 
 	REG_SCFG_EXT = 0x8300C000;
 
+	screenBrightness = 31;
+	fadeType = true;
+
 	// set ARM9 state to ready and wait for it to change again
 	arm9_stateFlag = ARM9_READY;
 	while ( arm9_stateFlag != ARM9_BOOTBIN ) {
@@ -1294,6 +1317,16 @@ void arm9_main (void)
 			}
 		}
 		if(displayScreen) {
+			if(fadeType == true) {
+				screenBrightness--;
+				if (screenBrightness < 0) screenBrightness = 0;
+			} else {
+				screenBrightness++;
+				if (screenBrightness > 31) screenBrightness = 31;
+			}
+			SetBrightness(0, screenBrightness);
+			SetBrightness(1, screenBrightness);
+
 			if(arm9_screenMode == 2) {
 				arm9_ttt();
 			} else if(arm9_screenMode == 1) {
