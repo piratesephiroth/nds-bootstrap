@@ -558,7 +558,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 			arm7FunctionThumb[5]);
 		*eepromRead=patchRead;
 
-		u32* eepromPageWrite = (u32*) (JumpTableFunc + 0x16);
+		/*u32* eepromPageWrite = (u32*) (JumpTableFunc + 0x16);
 		dbg_printf("Eeprom page write:\t");
 		dbg_hexa((u32)eepromPageWrite);
 		dbg_printf("\n");
@@ -593,7 +593,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		srcAddr = JumpTableFunc + 0x3E - vAddrOfRelocSrc + 0x37F8000 ;
 		u32 patchErase = generateA7InstrThumb(srcAddr,
 			arm7FunctionThumb[1]);
-		*eepromPageErase=patchErase;
+		*eepromPageErase=patchErase;*/
 
 	} else {
 
