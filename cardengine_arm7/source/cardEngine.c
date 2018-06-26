@@ -29,8 +29,6 @@
 #include "sr_data_srllastran.h"	// For rebooting the game (NTR-mode touch screen)
 #include "sr_data_srllastran_twltouch.h"	// For rebooting the game (TWL-mode touch screen)
 
-#define NDS_HEAD 0x02FFFE00
-
 extern void* memcpy(const void * src0, void * dst0, int len0);	// Fixes implicit declaration @ line 126 & 136
 extern int tryLockMutex(int * addr);					// Fixes implicit declaration @ line 145
 extern int lockMutex(int * addr);					    // Fixes implicit declaration
@@ -44,6 +42,7 @@ extern vu32* volatile cacheStruct;
 extern u32 fileCluster;
 extern u32 saveCluster;
 extern u32 sdk_version;
+extern u32 gottenSCFGExt;
 extern u32 dsiMode;
 extern u32 consoleModel;
 extern u32 romread_LED;
@@ -397,7 +396,7 @@ void myIrqHandlerVBlank(void) {
         }	
 	}
 
-	if (REG_SCFG_EXT == 0 && *(u8*)(NDS_HEAD+0x12) == 0x00) {
+	if (gottenSCFGExt == 0) {
 		// Control volume with the - and + buttons.
 		u8 volLevel;
 		u8 i2cVolLevel = i2cReadRegister(0x4A, 0x40);

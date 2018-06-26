@@ -14,6 +14,7 @@
 .global sdk_version
 .global fileCluster
 .global saveCluster
+.global gottenSCFGExt
 .global dsiMode
 .global consoleModel
 .global romread_LED
@@ -37,6 +38,8 @@ fileCluster:
 cardStruct:
 	.word	0x00000000
 cacheStruct:
+	.word	0x00000000
+gottenSCFGExt:
 	.word	0x00000000
 dsiMode:
 	.word	0x00000000
@@ -409,7 +412,7 @@ eepromReadThumbStub:
     
 cardIdThumbStub:
     ldr r0, =cardId
-    bx r0            
+    bx r0
 
     .pool
 
