@@ -365,6 +365,8 @@ arm7Functions :
 .word    eepromRead  
 .word    cardRead 
 .word    cardId 
+saveCluster:
+.word    0x00000000   
 
 arm7FunctionsThumb :
 .word    eepromProtectThumbStub 
@@ -375,8 +377,6 @@ arm7FunctionsThumb :
 .word    eepromReadThumbStub   
 .word    cardReadThumbStub  
 .word    cardIdThumbStub
-saveCluster:
-.word    0x00000000   
 
 	.thumb
 eepromProtectThumbStub:
