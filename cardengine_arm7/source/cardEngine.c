@@ -375,7 +375,7 @@ void myIrqHandlerVBlank(void) {
             if (lockMutex(&saveMutex)) {
     			memcpy((u32*)0x02000300,sr_data_srloader,0x020);
     			i2cWriteRegister(0x4a,0x70,0x01);
-    			i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into SRLoader
+    			i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into DSiMenu++
                 unlockMutex(&saveMutex);
             }
 		}
@@ -606,6 +606,9 @@ bool eepromRead (u32 src, void *dst, u32 len) {
     if (lockMutex(&saveMutex)) {
 		initialize();
 		fileRead(dst,*savFile,src,len,-1);
+    	/*memcpy((u32*)0x02000300,sr_data_srloader,0x020);
+    	i2cWriteRegister(0x4a,0x70,0x01);
+    	i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into DSiMenu++ (test code)*/
         unlockMutex(&saveMutex);
 	}
 
