@@ -128,7 +128,7 @@ u32 generateA7Instr(int arg1, int arg2) {
 
 u32 generateA7InstrThumb(int arg1, int arg2) {
     // 23 bit offset
-    u32 offset = (u32)(arg2 - arg1 - 8);
+    u32 offset = (u32)(arg2 - arg1 - 4);
     //dbg_printf("generateA7InstrThumb offset\n");
     //dbg_hexa(offset);
     // 1st instruction contains the upper 11 bit of the offset
