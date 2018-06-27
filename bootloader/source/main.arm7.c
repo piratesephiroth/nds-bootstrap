@@ -78,6 +78,8 @@ extern unsigned long argStart;
 extern unsigned long argSize;
 extern unsigned long dsiSD;
 extern unsigned long saveFileCluster;
+extern unsigned long saveSize;
+extern unsigned long language;
 extern unsigned long dsiMode;
 extern unsigned long patchMpuRegion;
 extern unsigned long patchMpuSize;
@@ -209,6 +211,9 @@ void resetMemory_ARM7 (void)
 		boot_readFirmware(settingsOffset + 0x000, (u8*)0x02FFFC80, 0x70);
 	} else {
 		boot_readFirmware(settingsOffset + 0x100, (u8*)0x02FFFC80, 0x70);
+	}
+	if (language >= 0 && language < 6) {
+		*(u8*)(0x02FFFCE4) = language;	// Change language
 	}
 }
 

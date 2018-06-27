@@ -9,11 +9,12 @@
 .global card_engine_start_sync
 .global card_engine_end
 .global cardStruct
-.global cacheStruct
 .global patches_offset
 .global sdk_version
 .global fileCluster
 .global saveCluster
+.global saveSize
+.global language
 .global gottenSCFGExt
 .global dsiMode
 .global consoleModel
@@ -37,7 +38,7 @@ fileCluster:
 	.word	0x00000000
 cardStruct:
 	.word	0x00000000
-cacheStruct:
+language:
 	.word	0x00000000
 gottenSCFGExt:
 	.word	0x00000000
@@ -370,6 +371,8 @@ arm7Functions :
 .word    cardId 
 saveCluster:
 .word    0x00000000   
+saveSize:
+.word    0x00000000 
 
 arm7FunctionsThumb :
 .word    eepromProtectThumbStub 

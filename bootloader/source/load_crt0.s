@@ -30,6 +30,8 @@
 	.global argSize
 	.global dsiSD
 	.global saveFileCluster
+	.global saveSize
+	.global language
 	.global dsiMode
 	.global patchMpuRegion
 	.global patchMpuSize
@@ -62,6 +64,10 @@ dsiSD:
 	.word	0
 saveFileCluster:
 	.word	0x00000000		@ .sav file
+saveSize:
+	.word	0x00000000		@ .sav file sive
+language:
+	.word	0x00000000
 dsiMode:
 	.word	0x00000000
 patchMpuRegion:

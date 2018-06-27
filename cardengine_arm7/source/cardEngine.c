@@ -38,10 +38,10 @@ static bool initialized = false;
 static bool initializedIRQ = false;
 static bool calledViaIPC = false;
 extern vu32* volatile cardStruct;
-extern vu32* volatile cacheStruct;
 extern u32 fileCluster;
 extern u32 saveCluster;
 extern u32 sdk_version;
+extern u32 language;
 extern u32 gottenSCFGExt;
 extern u32 dsiMode;
 extern u32 consoleModel;
@@ -368,6 +368,12 @@ void myIrqHandlerVBlank(void) {
 	
 	calledViaIPC = false;
 	
+	if (language >= 0 && language < 6) {
+		*(u8*)(0x02FFFCE4) = language;	// Change language
+	}
+
+	runCardEngineCheck();
+
 	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_DOWN | KEY_B)) {
 		softResetTimer = 0;
 	} else {
@@ -539,8 +545,6 @@ void myIrqHandlerVBlank(void) {
 		}
 		REG_MASTER_VOLUME = volLevel;
 	}
-
-	/* if (!runViaHalt) */ runCardEngineCheck();
     
 	#ifdef DEBUG		
 	nocashMessage("cheat_engine_start\n");

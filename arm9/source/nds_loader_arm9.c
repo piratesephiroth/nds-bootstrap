@@ -63,15 +63,17 @@ dsiSD:
 #define ARG_SIZE_OFFSET 20
 #define HAVE_DSISD_OFFSET 28
 #define SAV_OFFSET 32
-#define DSIMODE_OFFSET 36
-#define PUR_OFFSET 40
-#define PUS_OFFSET 44
-#define CONSOLEMODEL_OFFSET 48
-#define LOADSCR_OFFSET 52
-#define ROMREADLED_OFFSET 56
-#define GAMESOFTRESET_OFFSET 60
-#define CARDENGINE_ARM7_OFFSET 64
-#define CARDENGINE_ARM9_OFFSET 68
+#define SAVSIZE_OFFSET 36
+#define LANGUAGE_OFFSET 40
+#define DSIMODE_OFFSET 44
+#define PUR_OFFSET 48
+#define PUS_OFFSET 52
+#define CONSOLEMODEL_OFFSET 56
+#define LOADSCR_OFFSET 60
+#define ROMREADLED_OFFSET 64
+#define GAMESOFTRESET_OFFSET 68
+#define CARDENGINE_ARM7_OFFSET 72
+#define CARDENGINE_ARM9_OFFSET 76
 
 typedef signed int addr_t;
 typedef unsigned char data_t;
@@ -297,7 +299,7 @@ static bool dldiPatchLoader (data_t *binData, u32 binSize, bool clearBSS)
 	return true;
 }
 
-int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 consoleModel, u32 loadingScreen, u32 romread_LED, u32 gameSoftReset, bool initDisc, bool dldiPatchNds, int argc, const char** argv, u32* cheat_data)
+int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u32 saveSize, u32 language, u32 dsiMode, u32 patchMpuRegion, u32 patchMpuSize, u32 consoleModel, u32 loadingScreen, u32 romread_LED, u32 gameSoftReset, bool initDisc, bool dldiPatchNds, int argc, const char** argv, u32* cheat_data)
 {
 	char* argStart;
 	u16* argData;
@@ -358,6 +360,8 @@ int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u3
 	writeAddr ((data_t*) LCDC_BANK_C, ARG_SIZE_OFFSET, argSize);
 	
 	writeAddr ((data_t*) LCDC_BANK_C, SAV_OFFSET, saveCluster);
+	writeAddr ((data_t*) LCDC_BANK_C, SAVSIZE_OFFSET, saveSize);
+	writeAddr ((data_t*) LCDC_BANK_C, LANGUAGE_OFFSET, language);
 	writeAddr ((data_t*) LCDC_BANK_C, DSIMODE_OFFSET, dsiMode);
 	writeAddr ((data_t*) LCDC_BANK_C, PUR_OFFSET, patchMpuRegion);
 	writeAddr ((data_t*) LCDC_BANK_C, PUS_OFFSET, patchMpuSize);
@@ -404,7 +408,7 @@ int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u3
 	return true;
 }
 
-int runNdsFile (const char* filename, const char* savename, int dsiMode, int patchMpuRegion, int patchMpuSize, int consoleModel, int loadingScreen, int romread_LED, int gameSoftReset, int argc, const char** argv, u32* cheat_data) {
+int runNdsFile (const char* filename, const char* savename, int saveSize, int language, int dsiMode, int patchMpuRegion, int patchMpuSize, int consoleModel, int loadingScreen, int romread_LED, int gameSoftReset, int argc, const char** argv, u32* cheat_data) {
 	struct stat st;
 	struct stat stSav;
 	u32 clusterSav = 0;
@@ -436,7 +440,7 @@ int runNdsFile (const char* filename, const char* savename, int dsiMode, int pat
 
 	if(argv[0][0]=='s' && argv[0][1]=='d') havedsiSD = true;
 
-	return runNds (load_bin, load_bin_size, st.st_ino, clusterSav, dsiMode, patchMpuRegion, patchMpuSize, consoleModel, loadingScreen, romread_LED, gameSoftReset, true, true, argc, argv, cheat_data);
+	return runNds (load_bin, load_bin_size, st.st_ino, clusterSav, saveSize, language, dsiMode, patchMpuRegion, patchMpuSize, consoleModel, loadingScreen, romread_LED, gameSoftReset, true, true, argc, argv, cheat_data);
 }
 
 static inline void copyLoop (u32* dest, const u32* src, u32 size) {
