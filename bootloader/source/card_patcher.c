@@ -38,6 +38,7 @@ u32 j_HaltSignature5Alt1[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB51F};
 u32 j_HaltSignature5Alt2[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB5E3};
 u32 j_HaltSignature5Alt3[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB6FB};
 u32 j_HaltSignatureThumb5[2] = {0x4718004B, 0x037FB463};
+u16 j_HaltSignatureThumbSimple[2] = {0xDF06,0x4770};
 
 u32 swi12Signature[1] = {0x4770DF12};	// LZ77UnCompReadByCallbackWrite16bit
 u32 swiGetPitchTableSignature5[4] = {0x781A4B06, 0xD3030791, 0xD20106D1, 0x1A404904};
@@ -97,8 +98,6 @@ bool cardReadFound = false;
 u32 getOffset(u32* addr, size_t size, u32* find, size_t sizeofFind, int direction)
 {
 	u32* end = addr + size/sizeof(u32);
-	u32* debug = (u32*)0x037D0000;
-	debug[3] = end;
 
     u32 result = 0;
 	bool found = false;
@@ -124,6 +123,32 @@ u32 getOffset(u32* addr, size_t size, u32* find, size_t sizeofFind, int directio
 
 u32 generateA7Instr(int arg1, int arg2) {
     return (((u32)(arg2 - arg1 - 8) >> 2) & 0xFFFFFF) | 0xEB000000;
+}
+
+u32 getOffsetThumb(u16* addr, size_t size, u16* find, size_t sizeofFind, int direction)
+{
+	u16* end = addr + size/sizeof(u16);
+
+    u32 result = 0;
+	bool found = false;
+
+	do {
+		for(int i=0;i<sizeofFind;i++) {
+			if (addr[i] != find[i]) 
+			{
+				break;
+			} else if(i==sizeofFind-1) {
+				found = true;
+			}
+		}
+		if(!found) addr+=direction;
+	} while (addr != end && !found);
+
+	if (addr == end) {
+		return NULL;
+	}
+
+	return addr;
 }
 
 void generateA7InstrThumb(u16* instrs, int arg1, int arg2) {
@@ -701,8 +726,8 @@ void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 		dbg_printf("swiHalt SDK5 call alt 3 not found\n");
 		isThumb = true;
 		swiHaltOffset =   
-			getOffset((u32*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
-				  (u32*)j_HaltSignatureThumb5, 2, 1);
+			getOffsetThumb((u16*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
+				  (u16*)j_HaltSignatureThumbSimple, 2, 1);
 	}
 	if (!swiHaltOffset) {
 		dbg_printf("swiHalt SDK5 thumb call not found\n");
@@ -711,7 +736,12 @@ void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 		dbg_printf("swiHalt call found\n");
 		u32* swiHaltPatch = (u32*) patches[12-isThumb];
 		if (isThumb) {
-			copyLoop ((u32*)swiHaltOffset, swiHaltPatch, 0x8);
+            u32* arm7FunctionThumb =  (u32*) patches[14];
+            u16 instrs [2];
+		    generateA7InstrThumb(instrs, swiHaltOffset,
+			     arm7FunctionThumb[8]);
+            ((u16*)swiHaltOffset)[0]=instrs[0];
+            ((u16*)swiHaltOffset)[1]=instrs[1];
 		} else {
 			copyLoop ((u32*)swiHaltOffset, swiHaltPatch, 0xC);
 		}
