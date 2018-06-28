@@ -635,10 +635,10 @@ u32 fileRead (char* buffer, aFile file, u32 startOffset, u32 length, int ndmaSlo
 		beginBytes = (BYTES_PER_SECTOR < length + curByte ? (BYTES_PER_SECTOR - curByte) : length);
 
 		// Read first part from buffer, to align with sector boundary
-		for (dataPos = 0 ; dataPos < beginBytes; dataPos++)
-		{
-			buffer[dataPos] = globalBuffer[curByte++];
-		}
+        dataPos=0;
+        memcpy(buffer+dataPos,globalBuffer+curByte,beginBytes-dataPos);
+        curByte+=beginBytes;
+        dataPos+=beginBytes;
 
 		// Read in all the 512 byte chunks of the file directly, saving time
 		for ( chunks = ((int)length - beginBytes) / BYTES_PER_SECTOR; chunks > 0;)
@@ -751,11 +751,9 @@ u32 fileRead (char* buffer, aFile file, u32 startOffset, u32 length, int ndmaSlo
 			CARD_ReadSector( curSect + FAT_ClustToSect(file.currentCluster), globalBuffer, ndmaSlot);
 
 			// Read in last partial chunk
-			for (; dataPos < length; dataPos++)
-			{
-				buffer[dataPos] = globalBuffer[curByte];
-				curByte++;
-			}
+            memcpy(buffer+dataPos,globalBuffer+curByte,length-dataPos);
+            curByte+=length;
+            dataPos+=length;
 		}
         
         #ifdef DEBUG
