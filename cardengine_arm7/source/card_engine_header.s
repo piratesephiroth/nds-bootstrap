@@ -462,13 +462,9 @@ cardIdThumbStub:
 	bx  r3
     
 swiHaltThumbStub:
-    push    {r14}
-	push	{r1-r4}
 	ldr	r3, =newSwiHalt
 	bl	_blx_r3_stubthumb
-	pop   	{r1-r4} 
-	pop  	{r3}
-	bx  r3 
+	bx  lr
 
     .pool
 

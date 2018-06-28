@@ -38,8 +38,8 @@ u32 j_HaltSignature5Alt1[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB51F};
 u32 j_HaltSignature5Alt2[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB5E3};
 u32 j_HaltSignature5Alt3[3] = {0xE59FC000, 0xE12FFF1C, 0x037FB6FB};
 u32 j_HaltSignatureThumb5[2] = {0x4718004B, 0x037FB463};
-u16 j_HaltSignatureThumbSimple[2] = {0xDF06,0x4770};
 
+u16 swiHaltSignature[2] = {0xDF06,0x4770};
 u32 swi12Signature[1] = {0x4770DF12};	// LZ77UnCompReadByCallbackWrite16bit
 u32 swiGetPitchTableSignature5[4] = {0x781A4B06, 0xD3030791, 0xD20106D1, 0x1A404904};
 
@@ -575,7 +575,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 
         u16 instrs [2];
         
-        u32* cardRead = (u32*) (JumpTableFunc - 0xE);
+        /* u32* cardRead = (u32*) (JumpTableFunc - 0xE);
 		dbg_printf("card read:\t");
 		dbg_hexa((u32)cardRead);
 		dbg_printf("\n");
@@ -583,7 +583,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 		generateA7InstrThumb(instrs, srcAddr,
 			arm7FunctionThumb[6]);
 		cardRead[0]=instrs[0];
-        cardRead[1]=instrs[1];
+        cardRead[1]=instrs[1]; */
 
 		u16* eepromRead = (u16*) (JumpTableFunc + 0x8);
 		dbg_printf("Eeprom read:\t");
@@ -727,7 +727,7 @@ void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 		isThumb = true;
 		swiHaltOffset =   
 			getOffsetThumb((u16*)ndsHeader->arm7destination, 0x00010000,//, ndsHeader->arm7binarySize,
-				  (u16*)j_HaltSignatureThumbSimple, 2, 1);
+				  (u16*)swiHaltSignature, 2, 1);
 	}
 	if (!swiHaltOffset) {
 		dbg_printf("swiHalt SDK5 thumb call not found\n");
