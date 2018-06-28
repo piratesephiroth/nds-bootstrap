@@ -736,12 +736,12 @@ void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 		dbg_printf("swiHalt call found\n");
 		u32* swiHaltPatch = (u32*) patches[12-isThumb];
 		if (isThumb) {
-            u32* arm7FunctionThumb =  (u32*) patches[14];
+            /*u32* arm7FunctionThumb =  (u32*) patches[14];
             u16 instrs [2];
 		    generateA7InstrThumb(instrs, swiHaltOffset,
 			     arm7FunctionThumb[8]);
             ((u16*)swiHaltOffset)[0]=instrs[0];
-            ((u16*)swiHaltOffset)[1]=instrs[1];
+            ((u16*)swiHaltOffset)[1]=instrs[1];*/
 		} else {
 			copyLoop ((u32*)swiHaltOffset, swiHaltPatch, 0xC);
 		}
