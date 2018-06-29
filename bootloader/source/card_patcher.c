@@ -25,6 +25,7 @@
 
 // Subroutine function signatures arm7
 u32 relocateStartSignature[1]  = {0x3381C0DE,0}; //  33 81 C0 DE  DE C0 81 33 00 00 00 00 is the marker for the beggining of the relocated area :-)
+u32 relocateValidateSignature[1]  = {0x400010C};
 u32 a7cardReadSignature[2]     = {0x04100010,0x040001A4};
 u32 a7something1Signature[2]   = {0xE350000C,0x908FF100};
 u32 a7something2Signature[2]   = {0x0000A040,0x040001A0};
@@ -527,15 +528,21 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 	// Validate the relocation signature
     u32 vAddrOfRelocSrc = relocationStart + 0x8;
     // sanity checks
-    /*u32 relocationCheck1 =
-        *(u32*)(forwardedRelocStartAddr + 0xC);
+    u32 relocationCheck =
+        getOffset((u32*)ndsHeader->arm7destination, ndsHeader->arm7binarySize,
+        relocateValidateSignature, 1, 1);
     u32 relocationCheck2 =
-        *(u32*)(forwardedRelocStartAddr + 0x10);
-    if ( vAddrOfRelocSrc != relocationCheck1
-      || vAddrOfRelocSrc != relocationCheck2) {
+        *(u32*)(relocationCheck - 0x4);
+
+    if (relocationCheck + 0xC - vAddrOfRelocSrc + 0x37F8000 != relocationCheck2) {
         dbg_printf("Error in relocation checking\n");
-		return 0;
-    }*/
+        dbg_hexa(relocationCheck + 0xC - vAddrOfRelocSrc + 0x37F8000);
+        dbg_hexa(relocationCheck2);
+        
+		vAddrOfRelocSrc =  relocationCheck + 0xC - relocationCheck2 + 0x37F8000;
+        dbg_printf("vAddrOfRelocSrc\n");
+        dbg_hexa(vAddrOfRelocSrc); 
+    }
 
     dbg_printf("Relocation src: ");
 	dbg_hexa(vAddrOfRelocSrc);
