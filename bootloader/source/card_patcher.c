@@ -55,7 +55,8 @@ u32 cardReadStartSignature[1] = {0xE92D4FF8};
 u16 cardReadStartSignatureThumb[1] = {0xB5F0};
 u16 cardReadStartSignatureThumbAlt[1] = {0xB5F8};
 
-u32 a9cardIdSignature[2]      = {0x04100010,0xE92D4038};
+u32 a9cardIdSignature[2]      = {0x04100010,0xE92D4008};
+u32 a9cardIdSignatureAlt[2]      = {0x04100010,0xE92D4038};
 u16 a9cardIdSignatureThumb[8]    = {0xFAE0,0x02FF,0xFFFF,0xF8FF,0x01A4,0x0400,0x0010,0x0410};
 u32 cardIdStartSignature[2]   = {0xE92D4010,0xE3A050B8};
 u32 cardIdStartSignatureAlt[1]   = {0xE92D4038};
@@ -66,7 +67,8 @@ u16 cardIdStartSignatureThumbAlt2[2]   = {0xB508,0x20B8};
 u16 cardIdStartSignatureThumbAlt3[2]   = {0xB510,0x24B8};
   
 //u32 a9instructionBHI[1]       = {0x8A000001};
-u32 cardPullOutSignature5[4]   = {0xE92D4038,0xE201003F,0xE3500011,0x1A000011};
+u32 cardPullOutSignature[4]   = {0xE92D4010,0xE201003F,0xE3500011,0x1A000012};
+u32 cardPullOutSignatureAlt[4]   = {0xE92D4038,0xE201003F,0xE3500011,0x1A000011};
 u16 cardPullOutSignatureThumb[4]   = {0xB510,0x203F,0x4008,0x2811};
 u16 cardPullOutSignatureThumbAlt[4]   = {0xB538,0x203F,0x4008,0x2811};
 //u32 a9cardSendSignature[7]    = {0xE92D40F0,0xE24DD004,0xE1A07000,0xE1A06001,0xE1A01007,0xE3A0000E,0xE3A02000};
@@ -235,8 +237,6 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	debug[4] = ndsHeader->arm9destination;
 	debug[8] = moduleParams->sdk_version;
 
-	u32* cardPullOutSignature = cardPullOutSignature5;
-
 	u32 needFlushCache = 0;
 
 	bool usesThumb = false;
@@ -318,9 +318,15 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 			getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//, ndsHeader->arm9binarySize,
 				(u32*)cardPullOutSignature, 4, 1);
 		if (!cardPullOutOffset) {
-			dbg_printf("Card pull out handler not found\n");
-			//return 0;
-		} else {
+			dbg_printf("Card pull out handler not found. Trying alt\n");
+			cardPullOutOffset = 
+			getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//, ndsHeader->arm9binarySize,
+				(u32*)cardPullOutSignatureAlt, 4, 1);
+		}
+		if (!cardPullOutOffset) {
+			dbg_printf("Card pull out handler alt not found\n");
+		}
+		if (cardPullOutOffset>0) {
 			dbg_printf("Card pull out handler:\t");
 			dbg_hexa(cardPullOutOffset);
 			dbg_printf("\n");
@@ -375,7 +381,12 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
     u32 cardIdEndOffset =  
         getOffset((u32*)cardReadEndOffset+0x10, ndsHeader->arm9binarySize,
               (u32*)a9cardIdSignature, 2, 1);
-			  
+	if(!cardIdEndOffset){
+		cardIdEndOffset =  
+        getOffset((u32*)cardReadEndOffset+0x10, ndsHeader->arm9binarySize,
+              (u32*)a9cardIdSignatureAlt, 2, 1);
+	}
+
 	if(!cardIdEndOffset && !usesThumb){
 		cardIdEndOffset =  
         getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize,
