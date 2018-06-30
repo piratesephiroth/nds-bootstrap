@@ -24,7 +24,8 @@
 #include "debugToFile.h"
 
 // Subroutine function signatures arm7
-u32 relocateStartSignature[1]  = {0x3381C0DE,0}; //  33 81 C0 DE  DE C0 81 33 00 00 00 00 is the marker for the beggining of the relocated area :-)
+u32 relocateStartSignature[1]  = {0x2106C0DE};
+u32 relocateStartSignatureAlt[1]  = {0x3381C0DE}; //  33 81 C0 DE  DE C0 81 33 00 00 00 00 is the marker for the beggining of the relocated area :-)
 u32 relocateValidateSignature[1]  = {0x400010C};
 u32 a7cardReadSignature[2]     = {0x04100010,0x040001A4};
 u32 a7something1Signature[2]   = {0xE350000C,0x908FF100};
@@ -546,10 +547,17 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
     dbg_printf("\nArm7 (patch vAll)\n");
 
 	// Find the relocation signature
-    u32 relocationStart = getOffset((u32*)ndsHeader->arm7destination, ndsHeader->arm7binarySize,
+    u32 relocationStart = getOffset((u32*)ndsHeader->arm7destination, 0x800,
         relocateStartSignature, 1, 1);
     if (!relocationStart) {
-        dbg_printf("Relocation start not found\n");
+        dbg_printf("Relocation start not found. Trying alt\n");
+		relocationStart = getOffset((u32*)ndsHeader->arm7destination, 0x800,
+        relocateStartSignatureAlt, 1, 1);
+	} else {
+		relocationStart += 0x28;
+	}
+    if (!relocationStart) {
+        dbg_printf("Relocation start alt not found\n");
 		return 0;
     }
 
