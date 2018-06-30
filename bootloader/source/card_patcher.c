@@ -48,10 +48,12 @@ u32 swiGetPitchTableSignature5[4] = {0x781A4B06, 0xD3030791, 0xD20106D1, 0x1A404
 u32 moduleParamsSignature[2]   = {0xDEC00621, 0x2106C0DE};
 
 // sdk 5 version
-u32 a9cardReadSignature5[2]    = {0x04100010, 0x040001A4};
-u16 a9cardReadSignatureThumb5[4]    = {0x01A4,0x0400,0xFE00,0xFFFF};
-u32 cardReadStartSignature5[1] = {0xE92D4FF8};
-u16 cardReadStartSignatureThumb5[2] = {0xB5F8,0xB086};
+u32 a9cardReadSignature[2]    = {0x04100010, 0x040001A4};
+u16 a9cardReadSignatureThumb[8]    = {0xFE00,0xFFFF,0xE120,0x0213,0x01A4,0x0400,0x0010,0x0410};
+u16 a9cardReadSignatureThumbAlt[4]    = {0x01A4,0x0400,0xFE00,0xFFFF};
+u32 cardReadStartSignature[1] = {0xE92D4FF8};
+u16 cardReadStartSignatureThumb[1] = {0xB5F0};
+u16 cardReadStartSignatureThumbAlt[1] = {0xB5F8};
 
 u32 a9cardIdSignature[2]      = {0x04100010,0xE92D4038};
 u16 a9cardIdSignatureThumb[8]    = {0xFAE0,0x02FF,0xFFFF,0xF8FF,0x01A4,0x0400,0x0010,0x0410};
@@ -65,7 +67,8 @@ u16 cardIdStartSignatureThumbAlt3[2]   = {0xB510,0x24B8};
   
 //u32 a9instructionBHI[1]       = {0x8A000001};
 u32 cardPullOutSignature5[4]   = {0xE92D4038,0xE201003F,0xE3500011,0x1A000011};
-u16 cardPullOutSignatureThumb5[4]   = {0xB538,0x203F,0x4008,0x2811};
+u16 cardPullOutSignatureThumb[4]   = {0xB510,0x203F,0x4008,0x2811};
+u16 cardPullOutSignatureThumbAlt[4]   = {0xB538,0x203F,0x4008,0x2811};
 //u32 a9cardSendSignature[7]    = {0xE92D40F0,0xE24DD004,0xE1A07000,0xE1A06001,0xE1A01007,0xE3A0000E,0xE3A02000};
 u32 cardCheckPullOutSignature1[4]   = {0xE92D4018,0xE24DD004,0xE59F204C,0xE1D210B0};
    
@@ -232,38 +235,47 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	debug[4] = ndsHeader->arm9destination;
 	debug[8] = moduleParams->sdk_version;
 
-	u32* a9cardReadSignature = a9cardReadSignature5;
-	u32* a9cardReadSignatureThumb = a9cardReadSignatureThumb5;
-	u32* cardReadStartSignature = cardReadStartSignature5;
-	u32* cardReadStartSignatureThumb = cardReadStartSignatureThumb5;
 	u32* cardPullOutSignature = cardPullOutSignature5;
 
 	u32 needFlushCache = 0;
 
 	bool usesThumb = false;
+	int readType = 0;
 
 	// Find the card read
     u32 cardReadEndOffset =  
         getOffset((u32*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
               (u32*)a9cardReadSignature, 2, 1);
     if (!cardReadEndOffset) {
-        dbg_printf("Card read end not found\n");
+        dbg_printf("Card read end not found. Trying thumb\n");
+		usesThumb = true;
 		cardReadEndOffset =  
 			getOffsetThumb((u16*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
-				(u16*)a9cardReadSignatureThumb, 4, 1);
-		if (!cardReadEndOffset) {
-			dbg_printf("Thumb card read end not found\n");
-			return 0;
-		} else {
-			usesThumb = true;
-		}
+				(u16*)a9cardReadSignatureThumb, 8, 1);
     }
+    if (!cardReadEndOffset) {
+        dbg_printf("Thumb card read end not found. Trying alt\n");
+		readType = 1;
+		cardReadEndOffset =  
+			getOffsetThumb((u16*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
+				(u16*)a9cardReadSignatureThumbAlt, 4, 1);
+    }
+	if (!cardReadEndOffset) {
+		dbg_printf("Thumb card read end alt not found\n");
+		return 0;
+	}
 	debug[1] = cardReadEndOffset;
     u32 cardReadStartOffset = 0;
 	if (usesThumb) {
-		cardReadStartOffset =   
-			getOffsetThumb((u16*)cardReadEndOffset, -0xD0,
-				  (u16*)cardReadStartSignatureThumb, 2, -1);
+		if (readType == 0) {
+			cardReadStartOffset =   
+				getOffsetThumb((u16*)cardReadEndOffset, -0xD0,
+					  (u16*)cardReadStartSignatureThumb, 1, -1);
+		} else if (readType == 1) {
+			cardReadStartOffset =   
+				getOffsetThumb((u16*)cardReadEndOffset, -0xD0,
+					  (u16*)cardReadStartSignatureThumbAlt, 1, -1);
+		}
 		if (!cardReadStartOffset) {
 			dbg_printf("Card read start not found\n");
 			return 0;
@@ -284,9 +296,15 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	u32 cardPullOutOffset = 0;
 	if (usesThumb) {
-		cardPullOutOffset = 
-			getOffsetThumb((u16*)ndsHeader->arm9destination, 0x00300000,//, ndsHeader->arm9binarySize,
-				(u16*)cardPullOutSignatureThumb5, 4, 1);
+		if (readType == 0) {
+			cardPullOutOffset = 
+				getOffsetThumb((u16*)ndsHeader->arm9destination, 0x00300000,//, ndsHeader->arm9binarySize,
+					(u16*)cardPullOutSignatureThumb, 4, 1);
+		} else if (readType == 1) {
+			cardPullOutOffset = 
+				getOffsetThumb((u16*)ndsHeader->arm9destination, 0x00300000,//, ndsHeader->arm9binarySize,
+					(u16*)cardPullOutSignatureThumbAlt, 4, 1);
+		}
 		if (!cardPullOutOffset) {
 			dbg_printf("Thumb card pull out handler not found\n");
 			//return 0;
