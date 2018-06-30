@@ -72,14 +72,13 @@ u32 cardCheckPullOutSignature1[4]   = {0xE92D4018,0xE24DD004,0xE59F204C,0xE1D210
 u32 cardReadDmaStartSignature[1]   = {0xE92D43F8};
 u32 cardReadDmaStartSignatureAlt[1]   = {0xE92D47F0};
 u32 cardReadDmaStartSignatureAlt2[1]   = {0xE92D4FF0};
-u16 cardReadDmaStartSignatureThumb[2]   = {0xB5F8,0xB082};
+u16 cardReadDmaStartSignatureThumb[1]   = {0xB5F8};
 u32 cardReadDmaEndSignature[2]   = {0x01FF8000,0x000001FF};     
 
 u32 aRandomPatch[4] = {0xE92D43F8, 0xE3A04000, 0xE1A09001, 0xE1A08002};
 u32 aRandomPatch2[3] = {0xE59F003C,0xE590001C,0xE3500000};
 u32 sleepPatch[2] = {0x0A000001, 0xE3A00601}; 
-u16 sleepPatchThumb[4] = {0x4201,0xD002,0x0440,0xF7F6}; 
-u16 sleepPatchThumbAlt[2] = {0xD002,0x0440}; 
+u16 sleepPatchThumb[2] = {0xD002,0x0440}; 
 
  
 
@@ -324,7 +323,7 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 			//dbg_printf("Card read dma start not found\n");
 			cardReadDmaOffset =   
 				getOffsetThumb((u16*)cardReadDmaEndOffset, -0x100,
-					  (u16*)cardReadDmaStartSignatureThumb, 2, -1);
+					  (u16*)cardReadDmaStartSignatureThumb, 1, -1);
 			if (!cardReadDmaOffset) {
 				dbg_printf("Thumb card read dma start not found\n");
 			}
@@ -824,24 +823,13 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	if (usesThumb) {
 		sleepPatchOffset =   
         getOffsetThumb((u16*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
-              (u16*)sleepPatchThumb, 4, 1);
+              (u16*)sleepPatchThumb, 2, 1);
 		if (!sleepPatchOffset) {
-			dbg_printf("Thumb sleep patch not found. Trying alt\n");
-			//return 0;
-			sleepPatchOffset =   
-			getOffsetThumb((u16*)ndsHeader->arm7destination, 0x00020000,//, ndsHeader->arm9binarySize,
-				  (u16*)sleepPatchThumbAlt, 2, 1);
-			if (!sleepPatchOffset) {
-				dbg_printf("Thumb sleep patch alt not found\n");
-				//return 0;
-			} else {
-				dbg_printf("Thumb sleep patch alt found\n");
-				*(u32*)(sleepPatchOffset+4) = 0;
-			}
+			dbg_printf("Thumb sleep patch not found\n");
 		} else {
 			dbg_printf("Thumb sleep patch found\n");
+			*(u16*)(sleepPatchOffset+4) = 0;
 			*(u16*)(sleepPatchOffset+6) = 0;
-			*(u16*)(sleepPatchOffset+8) = 0;
 		}
 	}
 
