@@ -56,8 +56,8 @@ u32 cardReadStartSignature[1] = {0xE92D4FF8};
 u16 cardReadStartSignatureThumb[1] = {0xB5F0};
 u16 cardReadStartSignatureThumbAlt[1] = {0xB5F8};
 
-u32 a9cardIdSignature[2]      = {0x04100010,0xE92D4008};
-u32 a9cardIdSignatureAlt[2]      = {0x04100010,0xE92D4038};
+u32 a9cardIdSignature[4]      = {0xE8BD8010,0x02FFFAE0,0x040001A4,0x04100010};
+u32 a9cardIdSignatureAlt[3]      = {0x02FFFAE0,0x040001A4,0x04100010};
 u16 a9cardIdSignatureThumb[8]    = {0xFAE0,0x02FF,0xFFFF,0xF8FF,0x01A4,0x0400,0x0010,0x0410};
 u32 cardIdStartSignature[2]   = {0xE92D4010,0xE3A050B8};
 u32 cardIdStartSignatureAlt[1]   = {0xE92D4038};
@@ -379,24 +379,21 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 
 	// Find the card id
 	u32 cardIdStartOffset = 0;
-    u32 cardIdEndOffset =  
-        getOffset((u32*)cardReadEndOffset+0x10, ndsHeader->arm9binarySize,
-              (u32*)a9cardIdSignature, 2, 1);
-	if(!cardIdEndOffset){
-		cardIdEndOffset =  
-        getOffset((u32*)cardReadEndOffset+0x10, ndsHeader->arm9binarySize,
-              (u32*)a9cardIdSignatureAlt, 2, 1);
-	}
-
-	if(!cardIdEndOffset && !usesThumb){
-		cardIdEndOffset =  
-        getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize,
-              (u32*)a9cardIdSignature, 2, 1);
-	}
-	if(!cardIdEndOffset && usesThumb){
+    u32 cardIdEndOffset = 0;
+	if (usesThumb) {
 		cardIdEndOffset =  
         getOffsetThumb((u16*)ndsHeader->arm9destination, ndsHeader->arm9binarySize,
               (u16*)a9cardIdSignatureThumb, 8, 1);
+	} else {
+		cardIdEndOffset =  
+			getOffset((u32*)cardReadEndOffset, -0x800,
+				  (u32*)a9cardIdSignature, 4, -1);
+
+		if (!cardIdEndOffset) {
+			cardIdEndOffset =  
+			getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize,
+				  (u32*)a9cardIdSignatureAlt, 3, 1);
+		}
 	}
     if (!cardIdEndOffset) {
         dbg_printf("Card id end not found\n");
