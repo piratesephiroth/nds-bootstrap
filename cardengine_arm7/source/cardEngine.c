@@ -29,7 +29,7 @@
 #include "sr_data_srllastran.h"	// For rebooting the game (NTR-mode touch screen)
 #include "sr_data_srllastran_twltouch.h"	// For rebooting the game (TWL-mode touch screen)
 
-#define SAVE_LOCATION	0x0C480000
+#define SAVE_LOCATION	0x0CE00000
 
 extern void* memcpy(const void * src0, void * dst0, int len0);	// Fixes implicit declaration @ line 126 & 136
 extern int tryLockMutex(int * addr);					// Fixes implicit declaration @ line 145
