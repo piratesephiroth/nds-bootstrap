@@ -29,6 +29,8 @@
 #include "sr_data_srllastran.h"	// For rebooting the game (NTR-mode touch screen)
 #include "sr_data_srllastran_twltouch.h"	// For rebooting the game (TWL-mode touch screen)
 
+#define SAVE_LOCATION	0x0C480000
+
 extern void* memcpy(const void * src0, void * dst0, int len0);	// Fixes implicit declaration @ line 126 & 136
 extern int tryLockMutex(int * addr);					// Fixes implicit declaration @ line 145
 extern int lockMutex(int * addr);					    // Fixes implicit declaration
@@ -40,6 +42,7 @@ static bool calledViaIPC = false;
 extern vu32* volatile cardStruct;
 extern u32 fileCluster;
 extern u32 saveCluster;
+extern u32 saveSize;
 extern u32 sdk_version;
 extern u32 language;
 extern u32 gottenSCFGExt;
@@ -607,12 +610,11 @@ bool eepromRead (u32 src, void *dst, u32 len) {
 	dbg_hexa(len);
 	#endif	
 
-    if (lockMutex(&saveMutex)) {
+	if((saveSize > 0) && (saveSize <= 0x00100000)) {
+		memcpy(dst,SAVE_LOCATION+src,len);
+	} else if (lockMutex(&saveMutex)) {
 		initialize();
 		fileRead(dst,*savFile,src,len,-1);
-    	/*memcpy((u32*)0x02000300,sr_data_srloader,0x020);
-    	i2cWriteRegister(0x4a,0x70,0x01);
-    	i2cWriteRegister(0x4a,0x11,0x01);	// Reboot into DSiMenu++ (test code)*/
         unlockMutex(&saveMutex);
 	}
 
@@ -634,10 +636,13 @@ bool eepromPageWrite (u32 dst, const void *src, u32 len) {
     if (lockMutex(&saveMutex)) {
 		initialize();
     	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
-        fileWrite(src,*savFile,dst,len,-1);
-        i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
+    	if((saveSize > 0) && (saveSize <= 0x00100000)) {
+    		memcpy(SAVE_LOCATION+dst,src,len);
+    	}
+    	fileWrite(src,*savFile,dst,len,-1);
+    	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
         unlockMutex(&saveMutex);
-    }
+	}
 
 	return true;
 }
@@ -656,11 +661,14 @@ bool eepromPageProg (u32 dst, const void *src, u32 len) {
 
     if (lockMutex(&saveMutex)) {
 		initialize();
-    	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.
+    	i2cWriteRegister(0x4A, 0x12, 0x01);		// When we're saving, power button does nothing, in order to prevent corruption.    
+    	if((saveSize > 0) && (saveSize <= 0x00100000)) {
+    		memcpy(SAVE_LOCATION+dst,src,len);
+    	}
     	fileWrite(src,*savFile,dst,len,-1);
-    	i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
-    	unlockMutex(&saveMutex);
-    }
+        i2cWriteRegister(0x4A, 0x12, 0x00);		// If saved, power button works again.
+        unlockMutex(&saveMutex);
+	}
     
 	return true;
 }

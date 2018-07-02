@@ -23,6 +23,8 @@
 #include "cardengine_arm7_bin.h"
 #include "debugToFile.h"
 
+extern u32 ROMinRAM;
+
 // Subroutine function signatures arm7
 u32 relocateStartSignature[1]  = {0x3381C0DE}; //  33 81 C0 DE  DE C0 81 33 00 00 00 00 is the marker for the beggining of the relocated area :-)
 u32 relocateStartSignatureAlt[1]  = {0x2106C0DE};
@@ -539,7 +541,7 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	return 0;
 }
 
-u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster) {
+u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster, u32 saveSize) {
 
     dbg_printf("\nArm7 (patch vAll)\n");
 
@@ -733,6 +735,7 @@ u32 savePatchV5 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_pa
 
 	}
 	arm7Function[8] = saveFileCluster;
+	arm7Function[9] = saveSize;
 
 	return 1;
 }
@@ -800,7 +803,7 @@ void patchSwiHalt (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 	}
 }
 
-u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster) {
+u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster, u32 saveSize) {
 	u32* debug = (u32*)0x037C6000;
 
 	u32* patches =  (u32*) cardEngineLocation[0];
@@ -829,9 +832,13 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 			dbg_printf("swiGetPitchTable call found\n");
 		}
 	}
-	patchSwiHalt(ndsHeader, cardEngineLocation);
-       
-    u32 saveResult = savePatchV5(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster);	
+	if (ROMinRAM == false) patchSwiHalt(ndsHeader, cardEngineLocation);
+
+    u32 saveResult = savePatchV5(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster, saveSize);	
+	if ((saveResult == 1) && (saveSize > 0) && (saveSize <= 0x00100000)) {
+		aFile saveFile = getFileFromCluster (saveFileCluster);
+		fileRead(0x0C480000, saveFile, 0, saveSize, 3);
+	}
 
 	u32* irqEnableStartSignature = irqEnableStartSignature1;
 	u32* cardCheckPullOutSignature = cardCheckPullOutSignature1;
@@ -907,7 +914,7 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 }
 
 u32 patchCardNds (const tNDSHeader* ndsHeader, u32* cardEngineLocationArm7, u32* cardEngineLocationArm9, module_params_t* moduleParams, 
-		u32 saveFileCluster, u32 patchMpuRegion, u32 patchMpuSize) {
+		u32 saveFileCluster, u32 saveSize, u32 patchMpuRegion, u32 patchMpuSize) {
 
 	//Debug stuff.
 
@@ -918,7 +925,7 @@ u32 patchCardNds (const tNDSHeader* ndsHeader, u32* cardEngineLocationArm7, u32*
 
 	patchCardNdsArm9(ndsHeader, cardEngineLocationArm9, moduleParams, patchMpuRegion, patchMpuSize);
 	if (cardReadFound) {
-		patchCardNdsArm7(ndsHeader, cardEngineLocationArm7, moduleParams, saveFileCluster);
+		patchCardNdsArm7(ndsHeader, cardEngineLocationArm7, moduleParams, saveFileCluster, saveSize);
 
 		dbg_printf("ERR_NONE");
 		return ERR_NONE;

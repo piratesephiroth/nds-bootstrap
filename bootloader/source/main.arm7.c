@@ -63,10 +63,9 @@ void sdmmc_controller_init();
 #define NDS_HEAD 0x02FFFE00
 #define TEMP_ARM9_START_ADDRESS (*(vu32*)0x02FFFFF4)
 
-#define CHEAT_ENGINE_LOCATION	0x027FE000
-#define CHEAT_DATA_LOCATION  	0x06010000
 #define ENGINE_LOCATION_ARM7  	0x037C0000
 #define ENGINE_LOCATION_ARM9  	0x0C800000
+#define ROM_LOCATION			0x0D000000
 
 const char* bootName = "BOOT.NDS";
 
@@ -455,14 +454,14 @@ void NDSTouchscreenMode() {
 }
 
 
-//u32 ROM_LOCATION = 0x0C4A0000;
-u32 ROM_LOCATION = 0x0D000000;
+u32 ROMinRAM = false;
 u32 ROM_TID;
 u32 ROM_HEADERCRC;
 u32 ARM9_LEN;
 u32 ARM7_LEN;
 u32 fatSize;
 u32 romSize;
+u32 romSizeNoArm9;
 
 void loadBinary_ARM7 (aFile file)
 {
@@ -481,19 +480,16 @@ void loadBinary_ARM7 (aFile file)
 	char* ARM7_DST = (char*)ndsHeader[0x038>>2];
 	ARM7_LEN = ndsHeader[0x03C>>2];
 
-	u32 FAT_SRC = ndsHeader[0x048>>2];
-	u32 FAT_LEN = ndsHeader[0x04C>>2];
-	if(FAT_LEN > 0x8000) FAT_LEN = 0x8000;
-	
-	u32 fat[0x8000>>2];
-	// Load File Allocation Table into memory
-	fileRead((char*)fat, file, FAT_SRC, FAT_LEN, 3);
-	copyLoop (ENGINE_LOCATION_ARM9+0x8000, (u32*)fat, FAT_LEN);
-
 	ROM_TID = ndsHeader[0x00C>>2];
 	fatSize = ndsHeader[0x04C>>2];
 	romSize = ndsHeader[0x080>>2];
+	romSizeNoArm9 = romSize-0x4000-ARM9_LEN;
 	ROM_HEADERCRC = ndsHeader[0x15C>>2];
+
+	if ((consoleModel > 0) && (romSizeNoArm9 <= 0x01000000)) {
+		// Set to load ROM into RAM
+		ROMinRAM = true;
+	}
 	
 	// Load binaries into memory
 	fileRead(ARM9_DST, file, ARM9_SRC, ARM9_LEN, 3);
@@ -686,7 +682,7 @@ void arm7_main (void) {
 	}
 	increaseLoadBarLength();	// 5 dots
 
-	errorCode = patchCardNds(NDS_HEAD,ENGINE_LOCATION_ARM7,ENGINE_LOCATION_ARM9,params,saveFileCluster, patchMpuRegion, patchMpuSize);
+	errorCode = patchCardNds(NDS_HEAD, ENGINE_LOCATION_ARM7, ENGINE_LOCATION_ARM9, params, saveFileCluster, saveSize, patchMpuRegion, patchMpuSize);
 	if(errorCode == ERR_NONE) {
 		nocashMessage("patch card Sucessfull");
 	} else {
@@ -695,7 +691,7 @@ void arm7_main (void) {
 	}
 	increaseLoadBarLength();	// 6 dots
 
-	errorCode = hookNdsRetail(NDS_HEAD, *romFile, (const u32*)CHEAT_DATA_LOCATION, (u32*)CHEAT_ENGINE_LOCATION, (u32*)ENGINE_LOCATION_ARM7);
+	errorCode = hookNdsRetail(NDS_HEAD, *romFile, (u32*)ENGINE_LOCATION_ARM7);
 	if(errorCode == ERR_NONE) {
 		nocashMessage("card hook Sucessfull");
 	} else {
@@ -706,9 +702,14 @@ void arm7_main (void) {
  
 
 
-	hookNdsRetail9((u32*)ENGINE_LOCATION_ARM9, romSize);
+	if (ROMinRAM == true) {
+		// Load ROM into RAM
+		fileRead (ROM_LOCATION, *romFile, 0x4000+ARM9_LEN, romSizeNoArm9, 0);
+	}
 
-	if(romread_LED == 1) {
+	hookNdsRetail9((u32*)ENGINE_LOCATION_ARM9);
+
+	if(ROMinRAM == false && romread_LED > 0) {
 		i2cWriteRegister(0x4A, 0x30, 0x12);    // Turn WiFi LED off
 	}
 

@@ -30,6 +30,7 @@ extern unsigned long consoleModel;
 extern unsigned long romread_LED;
 extern unsigned long gameSoftReset;
 
+extern u32 ROMinRAM;
 extern u32 ROM_TID;
 extern u32 ROM_HEADERCRC;
 extern u32 ARM9_LEN;
@@ -264,7 +265,7 @@ static u32* hookInterruptHandler (u32* addr, size_t size) {
 }
 
 
-int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, const u32* cheatData, u32* cheatEngineLocation, u32* cardEngineLocation) {
+int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, u32* cardEngineLocation) {
 	u32* hookLocation = NULL;
 	u32* hookAccel = NULL;
 	u32* debug = (u32*)0x037C6000;
@@ -353,11 +354,12 @@ int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, const u32* cheatData
 	return ERR_NONE;
 }
 
-void hookNdsRetail9 (u32* cardEngineLocation9, u32 romSize) {
-	cardEngineLocation9[7] = ROM_TID;
-	cardEngineLocation9[8] = ROM_HEADERCRC;
-	cardEngineLocation9[9] = ARM9_LEN;
-	cardEngineLocation9[10] = romSize;
-	cardEngineLocation9[11] = dsiModeConfirmed;
-	cardEngineLocation9[12] = consoleModel;
+void hookNdsRetail9 (u32* cardEngineLocation9) {
+	cardEngineLocation9[7] = ROMinRAM;
+	cardEngineLocation9[8] = ROM_TID;
+	cardEngineLocation9[9] = ROM_HEADERCRC;
+	cardEngineLocation9[10] = ARM9_LEN;
+	cardEngineLocation9[11] = romSize;
+	cardEngineLocation9[12] = dsiModeConfirmed;
+	cardEngineLocation9[13] = consoleModel;
 }
