@@ -36,9 +36,9 @@ extern u32 consoleModel;
 #define _768KB_READ_SIZE 0xC0000
 #define _1MB_READ_SIZE 0x100000
 
-#define retail_CACHE_ADRESS_START 0x0C580000
-#define retail_CACHE_ADRESS_SIZE 0x260000
-#define retail_CACHE_SLOTS 0x13
+#define retail_CACHE_ADRESS_START 0x0C480000
+#define retail_CACHE_ADRESS_SIZE 0x280000
+#define retail_CACHE_SLOTS 0x14
 #define dev_CACHE_ADRESS_START 0x0D000000
 #define dev_CACHE_ADRESS_SIZE 0x1000000
 #define dev_CACHE_SLOTS 0x80
