@@ -311,10 +311,10 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 		accessCounter++;
 
-		processAsyncCommand();
+		if (consoleModel > 0) processAsyncCommand();
 
 		if (page == src && len > _128KB_READ_SIZE && dst < 0x02700000 && dst > 0x02000000 && ((u32)dst)%4==0) {
-			getAsyncSector();
+			if (consoleModel > 0) getAsyncSector();
 
 			// read directly at arm7 level
 			commandRead = 0x025FFB08;
@@ -338,7 +338,7 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 				u32 nextSector = sector+_128KB_READ_SIZE;	
 				// read max CACHE_READ_SIZE via the main RAM cache
 				if(slot==-1) {
-					getAsyncSector();
+					if (consoleModel > 0) getAsyncSector();
 
 					// send a command to the arm7 to fill the RAM cache
 					commandRead = 0x025FFB08;
@@ -361,20 +361,22 @@ int cardRead (u32* cacheStruct, u8* dst0, u32 src0, u32 len0) {
 
 					updateDescriptor(slot, sector);	
 		
-					triggerAsyncPrefetch(nextSector);
+					if (consoleModel > 0) triggerAsyncPrefetch(nextSector);
 				} else {
-					if(cacheCounter[slot] == 0x0FFFFFFF) {
-						// prefetch successfull
-						getAsyncSector();
-						
-						triggerAsyncPrefetch(nextSector);	
-					} else {
-						int i;
-						for(i=0; i<10; i++) {
-							if(asyncQueue[i]==sector) {
-								// prefetch successfull
-								triggerAsyncPrefetch(nextSector);	
-								break;
+					if (consoleModel > 0) {
+						if(cacheCounter[slot] == 0x0FFFFFFF) {
+							// prefetch successfull
+							getAsyncSector();
+							
+							triggerAsyncPrefetch(nextSector);	
+						} else {
+							int i;
+							for(i=0; i<10; i++) {
+								if(asyncQueue[i]==sector) {
+									// prefetch successfull
+									triggerAsyncPrefetch(nextSector);	
+									break;
+								}
 							}
 						}
 					}
