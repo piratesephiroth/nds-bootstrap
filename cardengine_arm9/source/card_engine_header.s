@@ -21,6 +21,7 @@
 .global romSize
 .global dsiMode
 .global consoleModel
+.global asyncPrefetch
 
 #define ICACHE_SIZE	0x2000
 #define DCACHE_SIZE	0x1000
@@ -54,6 +55,8 @@ romSize:
 dsiMode:
 	.word	0x00000000
 consoleModel:
+	.word	0x00000000
+asyncPrefetch:
 	.word	0x00000000
 	
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

@@ -29,6 +29,7 @@ extern unsigned long language;
 extern unsigned long consoleModel;
 extern unsigned long romread_LED;
 extern unsigned long gameSoftReset;
+extern unsigned long asyncPrefetch;
 
 extern u32 ROMinRAM;
 extern u32 ROM_TID;
@@ -362,4 +363,5 @@ void hookNdsRetail9 (u32* cardEngineLocation9) {
 	cardEngineLocation9[11] = romSize;
 	cardEngineLocation9[12] = dsiModeConfirmed;
 	cardEngineLocation9[13] = consoleModel;
+	cardEngineLocation9[14] = asyncPrefetch;
 }
