@@ -29,6 +29,7 @@
 #include "sr_data_srllastran.h"	// For rebooting the game (NTR-mode touch screen)
 #include "sr_data_srllastran_twltouch.h"	// For rebooting the game (TWL-mode touch screen)
 
+#define ROM_LOCATION	0x0D000000
 #define SAVE_LOCATION	0x0CE00000
 
 extern void* memcpy(const void * src0, void * dst0, int len0);	// Fixes implicit declaration @ line 126 & 136
@@ -47,6 +48,7 @@ extern u32 sdk_version;
 extern u32 language;
 extern u32 gottenSCFGExt;
 extern u32 dsiMode;
+extern u32 ROMinRAM;
 extern u32 consoleModel;
 extern u32 romread_LED;
 extern u32 gameSoftReset;
@@ -375,7 +377,7 @@ void myIrqHandlerVBlank(void) {
 		*(u8*)(0x02FFFCE4) = language;	// Change language
 	}
 
-	runCardEngineCheck();
+	if (ROMinRAM == false) runCardEngineCheck();
 
 	if(REG_KEYINPUT & (KEY_L | KEY_R | KEY_DOWN | KEY_B)) {
 		softResetTimer = 0;
@@ -725,9 +727,9 @@ bool cardRead (u32 dma,  u32 src, void *dst, u32 len) {
 	dbg_hexa(len);
 	#endif
     
-    	
-
-    if(lockMutex(&saveMutex)) {
+    if(ROMinRAM == true) {
+		memcpy(dst,ROM_LOCATION+src,len);
+	} else if(lockMutex(&saveMutex)) {
     	initialize();
     	cardReadLED(true);    // When a file is loading, turn on LED for card read indicator
     	//ndmaUsed = false;

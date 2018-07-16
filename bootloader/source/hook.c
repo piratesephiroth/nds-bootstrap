@@ -342,14 +342,15 @@ int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, u32* cardEngineLocat
 	cardEngineLocation[6] = language;
 	cardEngineLocation[7] = REG_SCFG_EXT;	// Pass unlocked SCFG before locking it
 	cardEngineLocation[8] = dsiModeConfirmed;
-	cardEngineLocation[9] = consoleModel;
-	cardEngineLocation[10] = romread_LED;
-	cardEngineLocation[11] = gameSoftReset;
+	cardEngineLocation[9] = ROMinRAM;
+	cardEngineLocation[10] = consoleModel;
+	cardEngineLocation[11] = romread_LED;
+	cardEngineLocation[12] = gameSoftReset;
 
 	u32* patches =  (u32*) cardEngineLocation[0];
 
 	*vblankHandler = patches[3];
-	*ipcSyncHandler = patches[4];
+	if (ROMinRAM == false) *ipcSyncHandler = patches[4];
 
 	nocashMessage("ERR_NONE");
 	return ERR_NONE;

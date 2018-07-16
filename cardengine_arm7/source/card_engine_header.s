@@ -17,6 +17,7 @@
 .global language
 .global gottenSCFGExt
 .global dsiMode
+.global ROMinRAM
 .global consoleModel
 .global romread_LED
 .global gameSoftReset
@@ -43,6 +44,8 @@ language:
 gottenSCFGExt:
 	.word	0x00000000
 dsiMode:
+	.word	0x00000000
+ROMinRAM:
 	.word	0x00000000
 consoleModel:
 	.word	0x00000000
@@ -271,6 +274,7 @@ newSwiHalt:
 @---------------------------------------------------------------------------------
 	ldr	r12, =mySwiHalt
 	bx	r12
+	swi	#0x060000
 	bx	lr
 @---------------------------------------------------------------------------------
 
