@@ -53,7 +53,8 @@ u32 moduleParamsSignature[2]   = {0xDEC00621, 0x2106C0DE};
 // sdk 5 version
 u32 a9cardReadSignature[2]    = {0x04100010, 0x040001A4};
 u16 a9cardReadSignatureThumb[8]    = {0xFE00,0xFFFF,0xE120,0x0213,0x01A4,0x0400,0x0010,0x0410};
-u16 a9cardReadSignatureThumbAlt[4]    = {0x01A4,0x0400,0xFE00,0xFFFF};
+u16 a9cardReadSignatureThumbAlt[8]    = {0xFE00,0xFFFF,0x9940,0x0214,0x01A4,0x0400,0x0010,0x0410};
+u16 a9cardReadSignatureThumbAlt2[4]    = {0x01A4,0x0400,0xFE00,0xFFFF};
 u32 cardReadStartSignature[1] = {0xE92D4FF8};
 u16 cardReadStartSignatureThumb[1] = {0xB5F0};
 u16 cardReadStartSignatureThumbAlt[1] = {0xB5F8};
@@ -258,10 +259,16 @@ u32 patchCardNdsArm9 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
     }
     if (!cardReadEndOffset) {
         dbg_printf("Thumb card read end not found. Trying alt\n");
+		cardReadEndOffset =  
+			getOffsetThumb((u16*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
+				(u16*)a9cardReadSignatureThumbAlt, 8, 1);
+    }
+    if (!cardReadEndOffset) {
+        dbg_printf("Thumb card read end not found. Trying alt 2\n");
 		readType = 1;
 		cardReadEndOffset =  
 			getOffsetThumb((u16*)ndsHeader->arm9destination, 0x00300000,//ndsHeader->arm9binarySize,
-				(u16*)a9cardReadSignatureThumbAlt, 4, 1);
+				(u16*)a9cardReadSignatureThumbAlt2, 4, 1);
     }
 	if (!cardReadEndOffset) {
 		dbg_printf("Thumb card read end alt not found\n");
