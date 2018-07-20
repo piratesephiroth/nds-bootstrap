@@ -500,6 +500,7 @@ void arm7_main (void) {
 
 	nocashMessage("try to patch card");
 	copyLoop (ENGINE_LOCATION_ARM7, (u32*)cardengine_arm7_bin, cardengine_arm7_bin_size);
+	dldiPatchBinary ((u8*)ENGINE_LOCATION_ARM7, cardengine_arm7_bin_size);
 	increaseLoadBarLength();	// 3 dots
 	copyLoop (ENGINE_LOCATION_ARM9, (u32*)cardengine_arm9_bin, cardengine_arm9_bin_size);
 	increaseLoadBarLength();	// 4 dots

@@ -90,7 +90,7 @@ static addr_t quickFind (const data_t* data, const data_t* search, size_t dataLe
 	return -1;
 }
 
-static const data_t dldiMagicString[] = "\xED\xA5\x8D\xBF Chishm";	// Normal DLDI file
+static const data_t dldiMagicString[] = "BOOT Strap ";	// Normal DLDI file
 static const data_t dldiMagicLoaderString[] = "\xEE\xA5\x8D\xBF Chishm";	// Different to a normal DLDI file
 #define DEVICE_TYPE_DLDI 0x49444C44
 
