@@ -37,7 +37,7 @@ u32 dbg_printf( char * message)
 
 	if(!_debug) return 0;
 
-	u32 ret = fileWrite (message, _debugFileCluster, _currentPos,  strlen(message), 3);
+	u32 ret = fileWrite (message, _debugFileCluster, _currentPos,  strlen(message));
 
 	_currentPos+=strlen(message);
 

@@ -15,11 +15,6 @@
 .global saveCluster
 .global saveSize
 .global language
-.global gottenSCFGExt
-.global ROMinRAM
-.global consoleModel
-.global romread_LED
-.global gameSoftReset
 
 #define ICACHE_SIZE	0x2000
 #define DCACHE_SIZE	0x1000
@@ -39,16 +34,6 @@ fileCluster:
 cardStruct:
 	.word	0x00000000
 language:
-	.word	0x00000000
-gottenSCFGExt:
-	.word	0x00000000
-ROMinRAM:
-	.word	0x00000000
-consoleModel:
-	.word	0x00000000
-romread_LED:
-	.word	0x00000000
-gameSoftReset:
 	.word	0x00000000
 cheat_data_offset:    
 	.word	cheat_data - patches_offset

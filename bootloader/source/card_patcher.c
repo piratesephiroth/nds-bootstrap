@@ -277,7 +277,7 @@ module_params_t* findModuleParams(const tNDSHeader* ndsHeader, u32 donorSdkVer)
 {
 	dbg_printf("Looking for moduleparams\n");
 	uint32_t moduleparams = getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize, (u32*)moduleParamsSignature, 2, 1);
-	*(vu32*)(0x2800008) = (getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize, (u32*)moduleParamsSignature, 2, 1) - 0x8);
+	//*(vu32*)(0x2800008) = (getOffset((u32*)ndsHeader->arm9destination, ndsHeader->arm9binarySize, (u32*)moduleParamsSignature, 2, 1) - 0x8);
 	if(!moduleparams)
 	{
 		dbg_printf("No moduleparams?\n");
@@ -347,7 +347,7 @@ void decompressLZ77Backwards(uint8_t* addr, size_t size)
 
 void ensureArm9Decompressed(const tNDSHeader* ndsHeader, module_params_t* moduleParams)
 {
-	*(vu32*)(0x280000C) = moduleParams->compressed_static_end;
+	//*(vu32*)(0x280000C) = moduleParams->compressed_static_end;
 	if(!moduleParams->compressed_static_end)
 	{
 		dbg_printf("This rom is not compressed\n");
@@ -2183,10 +2183,10 @@ void fixForDsiBios (const tNDSHeader* ndsHeader, u32* cardEngineLocation) {
 u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, module_params_t* moduleParams, u32 saveFileCluster, u32 saveSize) {
 	u32* debug = (u32*)0x037C6000;
 
-	if(REG_SCFG_ROM != 0x703) {
+	/*if(REG_SCFG_ROM != 0x703) {
 		fixForDsiBios(ndsHeader, cardEngineLocation);
-	}
-	if (ROMinRAM == false) patchSwiHalt(ndsHeader, cardEngineLocation);
+	}*/
+	patchSwiHalt(ndsHeader, cardEngineLocation);
 
 	u32* irqEnableStartSignature = irqEnableStartSignature1;
 	u32* cardCheckPullOutSignature = cardCheckPullOutSignature1;
@@ -2266,10 +2266,6 @@ u32 patchCardNdsArm7 (const tNDSHeader* ndsHeader, u32* cardEngineLocation, modu
 	u32 saveResult = savePatchV1(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster, saveSize);
 	if(!saveResult) saveResult = savePatchV2(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster, saveSize);
 	if(!saveResult) saveResult = savePatchUniversal(ndsHeader, cardEngineLocation, moduleParams, saveFileCluster, saveSize);
-	if ((saveResult == 1) && ROMinRAM==false && (saveSize > 0) && (saveSize <= 0x00100000)) {
-		aFile saveFile = getFileFromCluster (saveFileCluster);
-		fileRead(0x0C820000, saveFile, 0, saveSize, 3);
-	}
 
 	dbg_printf("ERR_NONE");
 	return 0;

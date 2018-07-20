@@ -24,14 +24,7 @@
 #include "fat.h"
 
 extern unsigned long language;
-extern unsigned long consoleModel;
-extern unsigned long romread_LED;
-extern unsigned long gameSoftReset;
-extern unsigned long asyncPrefetch;
 
-extern u32 runViaIRQ;
-
-extern u32 ROMinRAM;
 extern u32 ROM_TID;
 extern u32 ROM_HEADERCRC;
 extern u32 ARM9_LEN;
@@ -301,28 +294,20 @@ int hookNdsRetail (const tNDSHeader* ndsHeader, aFile file, u32* cardEngineLocat
 	cardEngineLocation[2] = *ipcSyncHandler;
 	cardEngineLocation[4] = file.firstCluster;
 	cardEngineLocation[6] = language;
-	cardEngineLocation[7] = REG_SCFG_EXT;	// Pass unlocked SCFG before locking it
-	cardEngineLocation[8] = ROMinRAM;
-	cardEngineLocation[9] = consoleModel;
-	cardEngineLocation[10] = romread_LED;
-	cardEngineLocation[11] = gameSoftReset;
 
 	u32* patches =  (u32*) cardEngineLocation[0];
 
 	*vblankHandler = patches[3];
-	if (ROMinRAM == false) *ipcSyncHandler = patches[4];
+	*ipcSyncHandler = patches[4];
 
 	nocashMessage("ERR_NONE");
 	return ERR_NONE;
 }
 
 void hookNdsRetail9 (u32* cardEngineLocation9) {
-	cardEngineLocation9[7] = ROMinRAM;
-	cardEngineLocation9[8] = ROM_TID;
-	cardEngineLocation9[9] = ROM_HEADERCRC;
-	cardEngineLocation9[10] = ARM9_LEN;
-	cardEngineLocation9[11] = romSize;
-	cardEngineLocation9[12] = enableExceptionHandler;
-	cardEngineLocation9[13] = consoleModel;
-	cardEngineLocation9[14] = asyncPrefetch;
+	cardEngineLocation9[7] = ROM_TID;
+	cardEngineLocation9[8] = ROM_HEADERCRC;
+	cardEngineLocation9[9] = ARM9_LEN;
+	cardEngineLocation9[10] = romSize;
+	cardEngineLocation9[11] = enableExceptionHandler;
 }

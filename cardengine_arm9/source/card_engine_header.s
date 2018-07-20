@@ -14,14 +14,11 @@
 .global sdk_version
 .global fileCluster
 .global saveCluster
-.global ROMinRAM
 .global ROM_TID
 .global ROM_HEADERCRC
 .global ARM9_LEN
 .global romSize
 .global enableExceptionHandler
-.global consoleModel
-.global asyncPrefetch
 
 #define ICACHE_SIZE	0x2000
 #define DCACHE_SIZE	0x1000
@@ -42,8 +39,6 @@ cardStruct:
 	.word	0x00000000
 cacheStruct:
 	.word	0x00000000
-ROMinRAM:
-	.word	0x00000000
 ROM_TID:
 	.word	0x00000000
 ROM_HEADERCRC:
@@ -53,10 +48,6 @@ ARM9_LEN:
 romSize:
 	.word	0x00000000
 enableExceptionHandler:
-	.word	0x00000000
-consoleModel:
-	.word	0x00000000
-asyncPrefetch:
 	.word	0x00000000
 
 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@

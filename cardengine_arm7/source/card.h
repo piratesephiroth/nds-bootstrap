@@ -24,32 +24,30 @@
 #define CARD_H
 
 #include "disc_io.h"
-
-// export interface
-extern IO_INTERFACE __myio_dsisd ;
+#include "io_dldi.h"
 
 static inline bool CARD_StartUp (void) {
-	return __myio_dsisd.fn_startup();
+	return _io_dldi.fn_startup();
 }
 
 static inline bool CARD_IsInserted (void) {
-	return __myio_dsisd.fn_isInserted();
+	return _io_dldi.fn_isInserted();
 }
 
-static inline bool CARD_ReadSector (u32 sector, void *buffer, int ndmaSlot) {
-	return __myio_dsisd.fn_readSectors(sector, 1, buffer, ndmaSlot);
+static inline bool CARD_ReadSector (u32 sector, void *buffer) {
+	return _io_dldi.fn_readSectors(sector, 1, buffer);
 }
 
-static inline bool CARD_ReadSectors (u32 sector, int count, void *buffer, int ndmaSlot) {
-	return __myio_dsisd.fn_readSectors(sector, count, buffer, ndmaSlot);
+static inline bool CARD_ReadSectors (u32 sector, int count, void *buffer) {
+	return _io_dldi.fn_readSectors(sector, count, buffer);
 }
 
-static inline bool CARD_WriteSector (u32 sector, void *buffer, int ndmaSlot) {
-	return __myio_dsisd.fn_writeSectors(sector, 1, buffer, ndmaSlot);
+static inline bool CARD_WriteSector (u32 sector, void *buffer) {
+	return _io_dldi.fn_writeSectors(sector, 1, buffer);
 }
 
-static inline bool CARD_WriteSectors (u32 sector, int count, void *buffer, int ndmaSlot) {
-	return __myio_dsisd.fn_writeSectors(sector, count, buffer, ndmaSlot);
+static inline bool CARD_WriteSectors (u32 sector, int count, void *buffer) {
+	return _io_dldi.fn_writeSectors(sector, count, buffer);
 }
 
 #endif // CARD_H

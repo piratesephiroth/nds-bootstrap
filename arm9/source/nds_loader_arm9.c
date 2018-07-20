@@ -372,7 +372,7 @@ int runNds (const void* loader, u32 loaderSize, u32 cluster, u32 saveCluster, u3
 	writeAddr ((data_t*) LCDC_BANK_C, GAMESOFTRESET_OFFSET, gameSoftReset);
 	writeAddr ((data_t*) LCDC_BANK_C, ASYNC_OFFSET, asyncPrefetch);
     
-    loadCheatData(cheat_data);
+    //loadCheatData(cheat_data);
 
 	if(dldiPatchNds) {
 		// Patch the loader with a DLDI for the card
@@ -465,7 +465,7 @@ int loadCheatData (u32* cheat_data) {
     nocashMessage("cardengineArm7");
     nocashMessage(tohex(cardengineArm7));
     
-    u32 cheatDataOffset = cardengineArm7[12];
+    u32 cheatDataOffset = cardengineArm7[7];
     nocashMessage("cheatDataOffset");
     nocashMessage(tohex(cheatDataOffset));
     

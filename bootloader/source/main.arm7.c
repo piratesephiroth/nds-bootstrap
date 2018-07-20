@@ -64,9 +64,8 @@ void sdmmc_controller_init();
 #define NDS_HEAD 0x027FFE00
 #define TEMP_ARM9_START_ADDRESS (*(vu32*)0x027FFFF4)
 
-#define ENGINE_LOCATION_ARM7  	0x037C0000
-#define ENGINE_LOCATION_ARM9  	0x02400000
-#define ROM_LOCATION			0x0C804000
+#define ENGINE_LOCATION_ARM7  	0x0237C000
+#define ENGINE_LOCATION_ARM9  	0x0237B800
 
 const char* bootName = "BOOT.NDS";
 
@@ -83,14 +82,10 @@ extern unsigned long language;
 extern unsigned long donorSdkVer;
 extern unsigned long patchMpuRegion;
 extern unsigned long patchMpuSize;
-extern unsigned long consoleModel;
 extern unsigned long loadingScreen;
-extern unsigned long romread_LED;
-extern unsigned long gameSoftReset;
-extern unsigned long asyncPrefetch;
 
-static aFile * romFile = (aFile *)0x37D5000;
-static aFile * savFile = ((aFile *)0x37D5000)+1;
+static aFile * romFile = (aFile *)0x237B000;
+static aFile * savFile = ((aFile *)0x237B000)+1;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 // Used for debugging purposes
@@ -216,243 +211,6 @@ void resetMemory_ARM7 (void)
 	}
 }
 
-// The following 3 functions are not in devkitARM r47
-//---------------------------------------------------------------------------------
-u32 readTSCReg(u32 reg) {
-//---------------------------------------------------------------------------------
- 
-	REG_SPICNT = SPI_ENABLE | SPI_BAUD_4MHz | SPI_DEVICE_TOUCH | SPI_CONTINUOUS;
-	REG_SPIDATA = ((reg<<1) | 1) & 0xFF;
- 
-	while(REG_SPICNT & 0x80);
- 
-	REG_SPIDATA = 0;
- 
-	while(REG_SPICNT & 0x80);
-
-	REG_SPICNT = 0;
-
-	return REG_SPIDATA;
-}
-
-//---------------------------------------------------------------------------------
-void readTSCRegArray(u32 reg, void *buffer, int size) {
-//---------------------------------------------------------------------------------
- 
-	REG_SPICNT = SPI_ENABLE | SPI_BAUD_4MHz | SPI_DEVICE_TOUCH | SPI_CONTINUOUS;
-	REG_SPIDATA = ((reg<<1) | 1) & 0xFF;
-
-	char *buf = (char*)buffer;
-	while(REG_SPICNT & 0x80);
-	int count = 0;
-	while(count<size) {
-		REG_SPIDATA = 0;
- 
-		while(REG_SPICNT & 0x80);
-
-
-		buf[count++] = REG_SPIDATA;
-		
-	}
-	REG_SPICNT = 0;
-
-}
-
-
-//---------------------------------------------------------------------------------
-u32 writeTSCReg(u32 reg, u32 value) {
-//---------------------------------------------------------------------------------
- 
-	REG_SPICNT = SPI_ENABLE | SPI_BAUD_4MHz | SPI_DEVICE_TOUCH | SPI_CONTINUOUS;
-	REG_SPIDATA = ((reg<<1)) & 0xFF;
- 
-	while(REG_SPICNT & 0x80);
- 
-	REG_SPIDATA = value;
- 
-	while(REG_SPICNT & 0x80);
-
-	REG_SPICNT = 0;
-
-	return REG_SPIDATA;
-}
-
-
-//---------------------------------------------------------------------------------
-void NDSTouchscreenMode() {
-//---------------------------------------------------------------------------------
-	//unsigned char * *(unsigned char*)0x40001C0=		(unsigned char*)0x40001C0;
-	//unsigned char * *(unsigned char*)0x40001C0byte2=(unsigned char*)0x40001C1;
-	//unsigned char * *(unsigned char*)0x40001C2=	(unsigned char*)0x40001C2;
-	//unsigned char * I2C_DATA=	(unsigned char*)0x4004500;
-	//unsigned char * I2C_CNT=	(unsigned char*)0x4004501;
-
-
-	u8 volLevel;
-	
-	//if(fifoCheckValue32(FIFO_MAXMOD)) {
-	//	// special setting (when found special gamecode)
-	//	volLevel = 0xAC;
-	//} else {
-		// normal setting (for any other gamecodes)
-		volLevel = 0xA7;
-	//}
-
-	volLevel += 0x13;
-
-	// Touchscr
-	readTSCReg(0);
-	writeTSCReg(0,0);
-	writeTSCReg(0x3a,0);
-	readTSCReg(0x51);
-	writeTSCReg(3,0);
-	readTSCReg(2);
-	writeTSCReg(0,0);
-	readTSCReg(0x3f);
-	writeTSCReg(0,1);
-	readTSCReg(0x38);
-	readTSCReg(0x2a);
-	readTSCReg(0x2E);
-	writeTSCReg(0,0);
-	writeTSCReg(0x52,0x80);
-	writeTSCReg(0x40,0xC);
-	writeTSCReg(0,1);
-	writeTSCReg(0x24,0xff);
-	writeTSCReg(0x25,0xff);
-	writeTSCReg(0x26,0x7f);
-	writeTSCReg(0x27,0x7f);
-	writeTSCReg(0x28,0x4a);
-	writeTSCReg(0x29,0x4a);
-	writeTSCReg(0x2a,0x10);
-	writeTSCReg(0x2b,0x10);
-	writeTSCReg(0,0);
-	writeTSCReg(0x51,0);
-	writeTSCReg(0,3);
-	readTSCReg(2);
-	writeTSCReg(2,0x98);
-	writeTSCReg(0,1);
-	writeTSCReg(0x23,0);
-	writeTSCReg(0x1f,0x14);
-	writeTSCReg(0x20,0x14);
-	writeTSCReg(0,0);
-	writeTSCReg(0x3f,0);
-	readTSCReg(0x0b);
-	writeTSCReg(0x5,0);
-	writeTSCReg(0xb,0x1);
-	writeTSCReg(0xc,0x2);
-	writeTSCReg(0x12,0x1);
-	writeTSCReg(0x13,0x2);
-	writeTSCReg(0,1);
-  writeTSCReg(0x2E,0x00);
-  writeTSCReg(0,0);
-  writeTSCReg(0x3A,0x60);
-  writeTSCReg(0x01,01);
-  writeTSCReg(0x9,0x66);
-  writeTSCReg(0,1);
-  readTSCReg(0x20);
-  writeTSCReg(0x20,0x10);
-  writeTSCReg(0,0);
-  writeTSCReg( 04,00);
-  writeTSCReg( 0x12,0x81);
-  writeTSCReg( 0x13,0x82);
-  writeTSCReg( 0x51,0x82);
-  writeTSCReg( 0x51,0x00);
-  writeTSCReg( 0x04,0x03);
-  writeTSCReg( 0x05,0xA1);
-  writeTSCReg( 0x06,0x15);
-  writeTSCReg( 0x0B,0x87);
-  writeTSCReg( 0x0C,0x83);
-  writeTSCReg( 0x12,0x87);
-  writeTSCReg( 0x13,0x83);
-  writeTSCReg(0,3);
-  readTSCReg(0x10);
-  writeTSCReg(0x10,0x08);
-  writeTSCReg(0,4);
-  writeTSCReg(0x08,0x7F);
-  writeTSCReg(0x09,0xE1);
-  writeTSCReg(0xa,0x80);
-  writeTSCReg(0xb,0x1F);
-  writeTSCReg(0xc,0x7F);
-  writeTSCReg(0xd,0xC1);
-  writeTSCReg(0,0);
-  writeTSCReg( 0x41, 0x08);
-  writeTSCReg( 0x42, 0x08);
-  writeTSCReg( 0x3A, 0x00);
-  writeTSCReg(0,4);
-  writeTSCReg(0x08,0x7F);
-  writeTSCReg(0x09,0xE1);
-  writeTSCReg(0xa,0x80);
-  writeTSCReg(0xb,0x1F);
-  writeTSCReg(0xc,0x7F);
-  writeTSCReg(0xd,0xC1);
-  writeTSCReg(0,1);
-  writeTSCReg(0x2F, 0x2B);
-  writeTSCReg(0x30, 0x40);
-  writeTSCReg(0x31, 0x40);
-  writeTSCReg(0x32, 0x60);
-  writeTSCReg(0,0);
-  readTSCReg( 0x74);
-  writeTSCReg( 0x74, 0x02);
-  readTSCReg( 0x74);
-  writeTSCReg( 0x74, 0x10);
-  readTSCReg( 0x74);
-  writeTSCReg( 0x74, 0x40);
-  writeTSCReg(0,1);
-  writeTSCReg( 0x21, 0x20);
-  writeTSCReg( 0x22, 0xF0);
-  writeTSCReg(0,0);
-  readTSCReg( 0x51);
-  readTSCReg( 0x3f);
-  writeTSCReg( 0x3f, 0xd4);
-  writeTSCReg(0,1);
-  writeTSCReg(0x23,0x44);
-  writeTSCReg(0x1F,0xD4);
-  writeTSCReg(0x28,0x4e);
-  writeTSCReg(0x29,0x4e);
-  writeTSCReg(0x24,0x9e);
-  writeTSCReg(0x24,0x9e);
-  writeTSCReg(0x20,0xD4);
-  writeTSCReg(0x2a,0x14);
-  writeTSCReg(0x2b,0x14);
-  writeTSCReg(0x26,volLevel);
-  writeTSCReg(0x27,volLevel);
-  writeTSCReg(0,0);
-  writeTSCReg(0x40,0);
-  writeTSCReg(0x3a,0x60);
-  writeTSCReg(0,1);
-  writeTSCReg(0x26,volLevel);
-  writeTSCReg(0x27,volLevel);
-  writeTSCReg(0x2e,0x03);
-  writeTSCReg(0,3);
-  writeTSCReg(3,0);
-  writeTSCReg(0,1);
-  writeTSCReg(0x21,0x20);
-  writeTSCReg(0x22,0xF0);
-  readTSCReg(0x22);
-  writeTSCReg(0x22,0xF0);
-  writeTSCReg(0,0);
-  writeTSCReg(0x52,0x80);
-  writeTSCReg(0x51,0x00);
-  writeTSCReg(0,3);
-  readTSCReg(0x02);
-  writeTSCReg(2,0x98);
-  writeTSCReg(0,0xff);
-  writeTSCReg(5,0);
-	
-	
-	
-	
-	
-	
-	
-	// Powerman
-	writePowerManagement(0x00,0x0D);
-	//*(unsigned char*)0x40001C2 = 0x80, 0x00;		// read PWR[0]   ;<-- also part of TSC !
-	//*(unsigned char*)0x40001C2 = 0x00, 0x0D;		// PWR[0]=0Dh    ;<-- also part of TSC !
-	
-
-}
-
 
 u32 ROMinRAM = false;
 u32 ROM_TID;
@@ -469,7 +227,7 @@ void loadBinary_ARM7 (aFile file)
 	nocashMessage("loadBinary_ARM7");
 
 	// read NDS header
-	fileRead ((char*)ndsHeader, file, 0, 0x170, 3);
+	fileRead ((char*)ndsHeader, file, 0, 0x170);
 	// read ARM9 info from NDS header
 	u32 ARM9_SRC = ndsHeader[0x020>>2];
 	char* ARM9_DST = (char*)ndsHeader[0x028>>2];
@@ -485,14 +243,8 @@ void loadBinary_ARM7 (aFile file)
 	romSizeNoArm9 = romSize-0x4000-ARM9_LEN;
 	ROM_HEADERCRC = ndsHeader[0x15C>>2];
 
-	if ((consoleModel > 0) && (romSizeNoArm9 <= 0x017FC000)
-	|| (consoleModel == 0) && (romSizeNoArm9 <= 0x007FC000)) {
-		// Set to load ROM into RAM
-		ROMinRAM = true;
-	}
-
 	//Fix Pokemon games needing header data.
-	fileRead ((char*)0x027FF000, file, 0, 0x170, 3);
+	fileRead ((char*)0x027FF000, file, 0, 0x170);
 
 	if((*(u32*)(0x27FF00C) & 0x00FFFFFF) == 0x414441	// Diamond
 	|| (*(u32*)(0x27FF00C) & 0x00FFFFFF) == 0x415041	// Pearl
@@ -504,8 +256,8 @@ void loadBinary_ARM7 (aFile file)
 	}
 	
 	// Load binaries into memory
-	fileRead(ARM9_DST, file, ARM9_SRC, ARM9_LEN, 3);
-	fileRead(ARM7_DST, file, ARM7_SRC, ARM7_LEN, 3);
+	fileRead(ARM9_DST, file, ARM9_SRC, ARM9_LEN);
+	fileRead(ARM7_DST, file, ARM7_SRC, ARM7_LEN);
 	
 	// The World Ends With You (USA) (Europe)
 	if(ROM_TID == 0x454C5741 || ROM_TID == 0x504C5741){
@@ -611,8 +363,8 @@ void loadBinary_ARM7 (aFile file)
 	dmaCopyWords(3, (void*)ndsHeader, (void*)NDS_HEAD, 0x170);
 
 	// Switch to NTR mode BIOS (no effect with locked arm7 SCFG)
-	nocashMessage("Switch to NTR mode BIOS");
-	REG_SCFG_ROM = 0x703;
+	//nocashMessage("Switch to NTR mode BIOS");
+	//REG_SCFG_ROM = 0x703;
 }
 
 u32 enableExceptionHandler = true;
@@ -625,14 +377,6 @@ void setArm9Stuff(aFile file) {
 	|| (ROM_TID & 0x00FFFFFF) == 0x4D4441)	// AC:WW
 	{
 		enableExceptionHandler = false;
-	}
-
-	if (ROMinRAM == true) {
-		// Load ROM into RAM
-		fileRead (ROM_LOCATION, file, 0x4000+ARM9_LEN, romSizeNoArm9, 0);
-		if(*(u32*)((ROM_LOCATION-0x4000-ARM9_LEN)+0x003128AC) == 0x4B434148){ //Primary fix for Mario's Holiday
-			*(u32*)((ROM_LOCATION-0x4000-ARM9_LEN)+0x003128AC) = 0xA00;
-		}
 	}
 
 	hookNdsRetail9((u32*)ENGINE_LOCATION_ARM9);
@@ -697,40 +441,11 @@ static u32 quickFind (const unsigned char* data, const unsigned char* search, u3
 	return -1;
 }
 
-void initMBK() {
-	// give all DSI WRAM to arm7 at boot
-	// this function have no effect with ARM7 SCFG locked
-	
-	// arm7 is master of WRAM-A, arm9 of WRAM-B & C
-	REG_MBK9=0x3000000F;
-	
-	// WRAM-A fully mapped to arm7
-	*((vu32*)REG_MBK1)=0x8185898D; // same as dsiware
-	
-	// WRAM-B fully mapped to arm7 // inverted order
-	*((vu32*)REG_MBK2)=0x9195999D;
-	*((vu32*)REG_MBK3)=0x8185898D;
-	
-	// WRAM-C fully mapped to arm7 // inverted order
-	*((vu32*)REG_MBK4)=0x9195999D;
-	*((vu32*)REG_MBK5)=0x8185898D;
-	
-	// WRAM mapped to the 0x3700000 - 0x37FFFFF area 
-	// WRAM-A mapped to the 0x37C0000 - 0x37FFFFF area : 256k
-	REG_MBK6=0x080037C0; // same as dsiware
-	// WRAM-B mapped to the 0x3740000 - 0x37BFFFF area : 512k // why? only 256k real memory is there
-	REG_MBK7=0x07C03740; // same as dsiware
-	// WRAM-C mapped to the 0x3700000 - 0x373FFFF area : 256k
-	REG_MBK8=0x07403700; // same as dsiware
-}
-
 static const unsigned char dldiMagicString[] = "\xED\xA5\x8D\xBF Chishm";	// Normal DLDI file
 
 void arm7_main (void) {
 	nocashMessage("bootloader");
 
-	initMBK(); 
-    
     // Wait for ARM9 to at least start
 	while (arm9_stateFlag < ARM9_START);
 
@@ -747,7 +462,7 @@ void arm7_main (void) {
 	}
 
 	// Init card
-	if(!FAT_InitFiles(initDisc, 3))
+	if(!FAT_InitFiles(initDisc))
 	{
 		nocashMessage("!FAT_InitFiles");
 		return -1;
@@ -757,7 +472,7 @@ void arm7_main (void) {
 
 	if ((romFile->firstCluster < CLUSTER_FIRST) || (romFile->firstCluster >= CLUSTER_EOF)) 	/* Invalid file cluster specified */
 	{
-		*romFile = getBootFileCluster(bootName, 3);
+		*romFile = getBootFileCluster(bootName);
 	}
 	if (romFile->firstCluster == CLUSTER_FREE)
 	{
@@ -765,21 +480,18 @@ void arm7_main (void) {
 		return -1;
 	}
     
-    buildFatTableCache(romFile, 3);
+    //buildFatTableCache(romFile, 3);
     
     *savFile = getFileFromCluster(saveFileCluster);
     
     if (savFile->firstCluster != CLUSTER_FREE)
     {
-         buildFatTableCache(savFile, 3);
+		//buildFatTableCache(savFile, 3);
 	}
 
 	int errorCode;
 
-	if (REG_SCFG_EXT == 0) {
-		NDSTouchscreenMode();
-		*(u16*)(0x4000500) = 0x807F;
-	}
+	*(u16*)(0x4000500) = 0x807F;
 
 	// Load the NDS file
 	nocashMessage("Load the NDS file");
@@ -820,12 +532,6 @@ void arm7_main (void) {
 
 
 	setArm9Stuff(*romFile);
-
-	if(ROMinRAM == false) {
-		if (romread_LED == 1 || (romread_LED > 0 && asyncPrefetch == 1)) {
-			i2cWriteRegister(0x4A, 0x30, 0x12);    // Turn WiFi LED off
-		}
-	}
 
 	increaseLoadBarLength();	// and finally, 8 dots
 	fadeType = false;
