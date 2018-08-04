@@ -52,15 +52,15 @@ extern u32 ROMinRAM;
 extern u32 consoleModel;
 extern u32 romread_LED;
 extern u32 gameSoftReset;
-u32 numberToActivateRunViaHalt = 10;
 vu32* volatile sharedAddr = (vu32*)0x027FFB08;
 static aFile * romFile = (aFile *)0x37D5000;
 static aFile * savFile = ((aFile *)0x37D5000)+1;
 
-static bool runViaHalt = false;
-static int accessCounter = 0;
+//static int accessCounter = 0;
 
 static int softResetTimer = 0;
+static int volumeAdjustDelay = 0;
+static bool volumeAdjustActivated = false;
 
 bool ndmaUsed = false;
 
@@ -277,30 +277,22 @@ void runCardEngineCheck (void) {
 
 		//nocashMessage("runCardEngineCheck mutex ok");
 
-		if (*(vu32*)(0x027FFB14) != 0) {
-			if (accessCounter > numberToActivateRunViaHalt-1) {
-				accessCounter = numberToActivateRunViaHalt;
-				runViaHalt = true;
-			}
-			if(*(vu32*)(0x027FFB14) == (vu32)0x026ff800)
-			{
-				log_arm9();
-				*(vu32*)(0x027FFB14) = 0;
-			}
+		if(*(vu32*)(0x027FFB14) == (vu32)0x026ff800)
+		{
+			log_arm9();
+			*(vu32*)(0x027FFB14) = 0;
+		}
 
-			if(*(vu32*)(0x027FFB14) == (vu32)0x025FFB08)
-			{
-				cardRead_arm9();
-				*(vu32*)(0x027FFB14) = 0;
-				accessCounter++;
-			}
+		if(*(vu32*)(0x027FFB14) == (vu32)0x025FFB08)
+		{
+			cardRead_arm9();
+			*(vu32*)(0x027FFB14) = 0;
+		}
 
-			if(*(vu32*)(0x027FFB14) == (vu32)0x020ff800)
-			{
-				asyncCardRead_arm9();
-				*(vu32*)(0x027FFB14) = 0;
-				accessCounter++;
-			}
+		if(*(vu32*)(0x027FFB14) == (vu32)0x020ff800)
+		{
+			asyncCardRead_arm9();
+			*(vu32*)(0x027FFB14) = 0;
 		}
 		unlockMutex(&cardEgnineCommandMutex);
 	}
@@ -348,7 +340,7 @@ void myIrqHandlerFIFO(void) {
 	
 	calledViaIPC = true;
 	
-	/*if (!runViaHalt)*/ runCardEngineCheck();
+	runCardEngineCheck();
 }
 
 //---------------------------------------------------------------------------------
@@ -360,9 +352,7 @@ void mySwiHalt(void) {
 	
 	calledViaIPC = false;
 	
-	//if (runViaHalt) {
-		runCardEngineCheckHalt();
-	//}
+	runCardEngineCheckHalt();
 }
 
 
@@ -551,6 +541,35 @@ void myIrqHandlerVBlank(void) {
 		REG_MASTER_VOLUME = volLevel;
 	}
     
+	if (consoleModel < 2) {
+		// Precise volume adjustment (for DSi)
+		if (volumeAdjustActivated) {
+			volumeAdjustDelay++;
+			if (volumeAdjustDelay == 30) {
+				volumeAdjustDelay = 0;
+				volumeAdjustActivated = false;
+			}
+		} else {
+			u8 i2cVolLevel = i2cReadRegister(0x4A, 0x40);
+			u8 i2cNewVolLevel = i2cVolLevel;
+			if (REG_KEYINPUT & (KEY_SELECT | KEY_UP)) {} else {
+				i2cNewVolLevel++;
+			}
+			if (REG_KEYINPUT & (KEY_SELECT | KEY_DOWN)) {} else {
+				i2cNewVolLevel--;
+			}
+			if (i2cNewVolLevel == 0xFF) {
+				i2cNewVolLevel = 0;
+			} else if (i2cNewVolLevel > 0x1F) {
+				i2cNewVolLevel = 0x1F;
+			}
+			if (i2cNewVolLevel != i2cVolLevel) {
+				i2cWriteRegister(0x4A, 0x40, i2cNewVolLevel);
+				volumeAdjustActivated = true;
+			}
+		}
+	}
+
 	#ifdef DEBUG		
 	nocashMessage("cheat_engine_start\n");
 	#endif	
