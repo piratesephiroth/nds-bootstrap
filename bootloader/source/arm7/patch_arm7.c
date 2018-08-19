@@ -166,7 +166,7 @@ u32 patchCardNdsArm7(cardengineArm7* ce7, const tNDSHeader* ndsHeader, const mod
 		// SDK 5
 		saveResult = savePatchV5(ce7, ndsHeader, moduleParams, saveFileCluster, saveSize);
 	}
-	if (saveResult == 1 && !ROMinRAM && saveSize > 0 && saveSize <= 0x00100000) {
+	if (saveResult == 1 && !extendedCache && !ROMinRAM && saveSize > 0 && saveSize <= 0x00100000) {
 		aFile saveFile = getFileFromCluster(saveFileCluster);
 		char* saveLocation = (isSdk5(moduleParams) ? (char*)SAVE_SDK5_LOCATION : (char*)SAVE_LOCATION);
 		fileRead(saveLocation, saveFile, 0, saveSize, 3);

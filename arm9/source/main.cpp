@@ -107,6 +107,7 @@ void runFile(
 	u32 romread_LED,
 	u32 gameSoftReset,
 	u32 asyncPrefetch,
+	u32 extendedCache,
 	u32 logging,
 	u32* cheat_data, u32 cheat_data_len,
 	u32 backlightMode) {
@@ -180,6 +181,7 @@ void runFile(
 			romread_LED,
 			gameSoftReset,
 			asyncPrefetch,
+			extendedCache,
 			logging,
 			argarray.size(), (const char**)&argarray[0], 
 			cheat_data, cheat_data_len
@@ -259,6 +261,7 @@ int main(int argc, char** argv) {
 		u32 romread_LED     = bootstrapini.GetInt("NDS-BOOTSTRAP", "ROMREAD_LED", 1);
 		bool gameSoftReset  = (bool)bootstrapini.GetInt("NDS-BOOTSTRAP", "GAME_SOFT_RESET", 0);
 		bool asyncPrefetch  = (bool)bootstrapini.GetInt("NDS-BOOTSTRAP", "ASYNC_PREFETCH", 0);
+		bool extendedCache  = (bool)bootstrapini.GetInt("NDS-BOOTSTRAP", "EXTENDED_CACHE", 0);
 		bool logging        = (bool)bootstrapini.GetInt("NDS-BOOTSTRAP", "LOGGING", 0);
 
 		std::vector<std::string> cheats;      
@@ -417,13 +420,13 @@ int main(int argc, char** argv) {
 			
 			for (size_t i = 0; i < cheat_data_len; i++) {
 				const char* cheat = cheats[i].c_str();
-				
+
 				dbg_printf(cheat);
 				nocashMessage(cheat);
-				dbg_printf(" ");
+				dbg_printf(" ");                    
 
 				cheat_data[i] = strtoul(cheat, NULL, 16);
-				
+
 				nocashMessage(tohex(cheat_data[i]));
 				dbg_printf(" "); 
 			}
@@ -444,6 +447,7 @@ int main(int argc, char** argv) {
 			romread_LED,
 			gameSoftReset,
 			asyncPrefetch,
+			extendedCache,
 			logging,
 			cheat_data, cheat_data_len,
 			backlightMode

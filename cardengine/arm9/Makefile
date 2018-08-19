@@ -40,7 +40,7 @@ CFLAGS	:=	$(COMMON) -std=gnu99
 CXXFLAGS	:= $(COMMON) -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	-g $(ARCH) $(INCLUDE) 
-LDFLAGS	=	-nostartfiles -T cardengine.ld -g $(ARCH) -Wl,-Map,$(TARGET).map
+LDFLAGS	=	-nostartfiles -T mainram.ld -g $(ARCH) -Wl,-Map,$(TARGET).map
 
 LIBS	:=	-lnds9
 
@@ -106,6 +106,7 @@ $(BUILD):
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(TARGET).bin $(TARGET).elf
+	@rm -fr $(BUILD) $(TARGET)_wram.bin $(TARGET)_wram.elf
  
  
 #---------------------------------------------------------------------------------
@@ -117,9 +118,9 @@ DEPENDS	:=	$(OFILES:.o=.d)
 # main targets
 #---------------------------------------------------------------------------------
 $(OUTPUT).bin:	$(TARGET).elf
-$(TARGET).elf:	cardengine.ld $(OFILES)
+$(TARGET).elf:	mainram.ld $(OFILES)
 
-cardengine.ld:	$(CURDIR)/../cardengine.ld.in
+mainram.ld:	$(CURDIR)/../mainram.ld.in
 	arm-none-eabi-cpp -P $(INCLUDE) $< $@
 
 

@@ -186,11 +186,11 @@ int loadArgs(int argc, const char** argv) {
 
 int loadCheatData(u32* cheat_data, u32 cheat_data_len) {
 	nocashMessage("loadCheatData");
-			
+
 	cardengineArm7* ce7 = getCardengineArm7(lc0);
 	nocashMessage("ce7");
 	nocashMessage(tohex((u32)ce7));
-
+	
 	u32* ce7_cheat_data = getCheatData(ce7);
 	nocashMessage("ce7_cheat_data");
 	nocashMessage(tohex((u32)ce7_cheat_data));
@@ -219,6 +219,7 @@ int runNds(
 	u32 romread_LED,
 	bool gameSoftReset,
 	bool asyncPrefetch,
+	bool extendedCache,
 	bool logging,
 	bool initDisc,
 	bool dldiPatchNds,
@@ -256,6 +257,7 @@ int runNds(
 	lc0->romread_LED     = romread_LED;
 	lc0->gameSoftReset   = gameSoftReset;
 	lc0->asyncPrefetch   = asyncPrefetch;
+	lc0->extendedCache   = extendedCache;
 	lc0->logging         = logging;
 
 	loadCheatData(cheat_data, cheat_data_len);
@@ -301,6 +303,7 @@ int runNdsFile(
 	u32 romread_LED,
 	bool gameSoftReset,
 	bool asyncPrefetch,
+	bool extendedCache,
 	bool logging,
 	int argc, const char** argv,
 	u32* cheat_data, u32 cheat_data_len
@@ -350,6 +353,7 @@ int runNdsFile(
 		romread_LED,
 		gameSoftReset,
 		asyncPrefetch,
+		extendedCache,
 		logging,
 		true,
 		true,

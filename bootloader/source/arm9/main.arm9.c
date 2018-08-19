@@ -186,10 +186,8 @@ void arm9_main(void) {
 	//	: : "r" (0x02FFFE04)
 	//);
 
+	// 32MB memory mode
 	REG_SCFG_EXT = 0x8300C000;
-	
-    // lock SCFG
-    REG_SCFG_EXT &= ~(1UL << 31);
 
 	screenBrightness = 31;
 	fadeType = true;
@@ -199,7 +197,9 @@ void arm9_main(void) {
 	while (arm9_stateFlag != ARM9_BOOTBIN) {
 		// SDK 5
 		*(u32*)0x23FFC40 = 01;
-		*(u32*)0x2FFFC40 = 01;
+		if (!extendedCache) {
+			*(u32*)0x2FFFC40 = 01;
+		}
 
 		if (arm9_stateFlag == ARM9_DISPERR) {
 			displayScreen = true;
@@ -239,6 +239,14 @@ void arm9_main(void) {
 					break;
 			}
 		}
+	}
+
+	if (extendedCache) {
+		// 4MB memory mode
+		REG_SCFG_EXT = 0x83000000;
+	} else {
+		// lock SCFG
+		REG_SCFG_EXT &= ~(1UL << 31);
 	}
 
 	REG_IME = 0;

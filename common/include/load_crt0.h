@@ -26,9 +26,11 @@ typedef struct loadCrt0 {
     u32 romread_LED;
     u32 gameSoftReset;
     u32 asyncPrefetch;
+    u32 extendedCache;
     u32 logging;
     u32 cardengine_arm7_offset; //cardengineArm7* cardengine_arm7;
     u32 cardengine_arm9_offset; //cardengineArm9* cardengine_arm9;
+    u32 cardengine_arm9_dsiwram_offset; //cardengineArm9* cardengine_arm9_dsiwram;
 } __attribute__ ((__packed__)) loadCrt0;
 
 inline cardengineArm7* getCardengineArm7(const loadCrt0* lc0) {

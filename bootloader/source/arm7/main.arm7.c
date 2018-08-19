@@ -62,6 +62,7 @@
 
 #include "cardengine_arm7_bin.h"
 #include "cardengine_arm9_bin.h"
+#include "cardengine_arm9_dsiwram_bin.h"
 
 //#define memcpy __builtin_memcpy
 
@@ -99,6 +100,7 @@ static aFile* savFile = (aFile*)0x37D5000 + 1;
 static const char* bootName = "BOOT.NDS";
 static module_params_t* moduleParams = NULL;
 static vu32* tempArm9StartAddress = (vu32*)TEMP_ARM9_START_ADDRESS_LOCATION;
+static u32 cardEngine9Location = CARDENGINE_ARM9_LOCATION;
 static char* romLocation = (char*)ROM_LOCATION;
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -484,18 +486,35 @@ static void loadBinary_ARM7(aFile file, tDSiHeader* dsiHeaderTemp) {
 	char* ARM7_DST = (char*)dsiHeaderTemp->ndshdr.arm7destination;
 
 	// Fix Pokemon games needing header data.
-	//fileRead((char*)0x027FF000, file, 0, 0x170, 3);
-	//memcpy((void*)0x027FF000, &dsiHeaderTemp.ndshdr, sizeof(dsiHeaderTemp.ndshdr));
-	*(tNDSHeader*)0x027FF000 = dsiHeaderTemp->ndshdr;
+	
+	if (extendedCache) {
+		//fileRead((char*)0x027FF000, file, 0, 0x170, 3);
+		//memcpy((void*)0x027FF000, &dsiHeaderTemp.ndshdr, sizeof(dsiHeaderTemp.ndshdr));
+		*(tNDSHeader*)0x023FF000 = dsiHeaderTemp->ndshdr;
 
-	if ((*(u32*)0x27FF00C & 0x00FFFFFF) == 0x414441 // Diamond
-	|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x415041  // Pearl
-	|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x555043  // Platinum
-	|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x4B5049  // HG
-	|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x475049) // SS
-	{
-		// Make the Pokemon game code ADAJ.
-		*(u32*)0x27FF00C = 0x4A414441;
+		if ((*(u32*)0x23FF00C & 0x00FFFFFF) == 0x414441 // Diamond
+		|| (*(u32*)0x23FF00C & 0x00FFFFFF) == 0x415041  // Pearl
+		|| (*(u32*)0x23FF00C & 0x00FFFFFF) == 0x555043  // Platinum
+		|| (*(u32*)0x23FF00C & 0x00FFFFFF) == 0x4B5049  // HG
+		|| (*(u32*)0x23FF00C & 0x00FFFFFF) == 0x475049) // SS
+		{
+			// Make the Pokemon game code ADAJ.
+			*(u32*)0x23FF00C = 0x4A414441;
+		}
+	} else {
+		//fileRead((char*)0x027FF000, file, 0, 0x170, 3);
+		//memcpy((void*)0x027FF000, &dsiHeaderTemp.ndshdr, sizeof(dsiHeaderTemp.ndshdr));
+		*(tNDSHeader*)0x027FF000 = dsiHeaderTemp->ndshdr;
+
+		if ((*(u32*)0x27FF00C & 0x00FFFFFF) == 0x414441 // Diamond
+		|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x415041  // Pearl
+		|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x555043  // Platinum
+		|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x4B5049  // HG
+		|| (*(u32*)0x27FF00C & 0x00FFFFFF) == 0x475049) // SS
+		{
+			// Make the Pokemon game code ADAJ.
+			*(u32*)0x27FF00C = 0x4A414441;
+		}
 	}
 
 	// Load binaries into memory
@@ -529,11 +548,11 @@ static bool loadModuleParams(const tNDSHeader* ndsHeader) {
 		// Found module params
 		//*(vu32*)0x2800008 = ((u32)moduleParamsOffset - 0x8);
 		//*(vu32*)0x2800008 = (vu32)(moduleParamsOffset - 2);
-		*(vu32*)0x2800008 = (vu32)((u32*)moduleParams + 5); // (u32*)moduleParams + 7 - 2
+		if (!extendedCache) *(vu32*)0x2800008 = (vu32)((u32*)moduleParams + 5); // (u32*)moduleParams + 7 - 2
 		return true;
 	}
 	nocashMessage("No moduleparams?\n");
-	*(vu32*)0x2800010 = 1;
+	if (!extendedCache) *(vu32*)0x2800010 = 1;
 	moduleParams = buildModuleParams(donorSdkVer);
 	return false;
 }
@@ -545,13 +564,25 @@ static void loadHeader(tDSiHeader* dsiHeaderTemp, const module_params_t* moduleP
 		tempArm9StartAddress = (vu32*)TEMP_ARM9_START_ADDRESS_SDK5_LOCATION;
 		romLocation          = (char*)ROM_SDK5_LOCATION;
 	}
+	if (extendedCache) {
+		ndsHeader            = (tNDSHeader*)NDS_HEADER_4MB;
+		tempArm9StartAddress = (vu32*)TEMP_ARM9_START_ADDRESS_4MB_LOCATION;
+		romLocation          = (char*)EXTENDED_ROM_LOCATION;
 
-	if ((sdk5 && consoleModel > 0 && getRomSizeNoArm9(ndsHeader) <= 0x01000000)
-	|| (!sdk5 && consoleModel > 0 && getRomSizeNoArm9(ndsHeader) <= 0x017FC000)
-	|| (!sdk5 && consoleModel == 0 && getRomSizeNoArm9(ndsHeader) <= 0x007FC000))
-	{
-		// Set to load ROM into RAM
-		ROMinRAM = true;
+		if ((consoleModel > 0 && getRomSizeNoArm9(ndsHeader) <= 0x01C00000)
+		|| (consoleModel == 0 && getRomSizeNoArm9(ndsHeader) <= 0x00C00000))
+		{
+			// Set to load ROM into RAM
+			ROMinRAM = true;
+		}
+	} else {
+		if ((sdk5 && consoleModel > 0 && getRomSizeNoArm9(ndsHeader) <= 0x01000000)
+		|| (!sdk5 && consoleModel > 0 && getRomSizeNoArm9(ndsHeader) <= 0x017FC000)
+		|| (!sdk5 && consoleModel == 0 && getRomSizeNoArm9(ndsHeader) <= 0x007FC000))
+		{
+			// Set to load ROM into RAM
+			ROMinRAM = true;
+		}
 	}
 
 	// First copy the header to its proper location, excluding
@@ -601,7 +632,7 @@ static void setArm9Stuff(const tNDSHeader* ndsHeader, aFile file) {
 	}
 
 	hookNdsRetailArm9(
-		(cardengineArm9*)CARDENGINE_ARM9_LOCATION,
+		(cardengineArm9*)cardEngine9Location,
 		moduleParams,
 		ROMinRAM,
 		dsiModeConfirmed,
@@ -707,7 +738,7 @@ int arm7_main(void) {
 
 	int errorCode;
 
-	if (REG_SCFG_EXT == 0 || consoleModel < 2) {
+	if (REG_SCFG_EXT == 0) {
 		NDSTouchscreenMode();
 		*(u16*)0x4000500 = 0x807F;
 	}
@@ -728,16 +759,21 @@ int arm7_main(void) {
 	increaseLoadBarLength(); // 3 dots
 
 	nocashMessage("Trying to patch the card...\n");
-
+	
 	memcpy((u32*)CARDENGINE_ARM7_LOCATION, (u32*)cardengine_arm7_bin, cardengine_arm7_bin_size);
 	increaseLoadBarLength(); // 4 dots
 
-	memcpy((u32*)CARDENGINE_ARM9_LOCATION, (u32*)cardengine_arm9_bin, cardengine_arm9_bin_size);
+	if (extendedCache) {
+		cardEngine9Location = CARDENGINE_ARM9_WRAM_LOCATION;
+		memcpy((u32*)CARDENGINE_ARM9_WRAM_LOCATION, (u32*)cardengine_arm9_dsiwram_bin, cardengine_arm9_dsiwram_bin_size);
+	} else {
+		memcpy((u32*)CARDENGINE_ARM9_LOCATION, (u32*)cardengine_arm9_bin, cardengine_arm9_bin_size);
+	}
 	increaseLoadBarLength(); // 5 dots
 
 	errorCode = patchCardNds(
 		(cardengineArm7*)CARDENGINE_ARM7_LOCATION,
-		(cardengineArm9*)CARDENGINE_ARM9_LOCATION,
+		(cardengineArm9*)cardEngine9Location,
 		ndsHeader,
 		moduleParams,
 		saveFileCluster,
@@ -764,7 +800,8 @@ int arm7_main(void) {
 		ROMinRAM,
 		consoleModel,
 		romread_LED,
-		gameSoftReset
+		gameSoftReset,
+		extendedCache
 	);
 	if (errorCode == ERR_NONE) {
 		nocashMessage("Card hook successful");

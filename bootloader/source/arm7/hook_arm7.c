@@ -253,7 +253,8 @@ int hookNdsRetailArm7(
 	u32 ROMinRAM,
 	u32 consoleModel,
 	u32 romread_LED,
-	u32 gameSoftReset
+	u32 gameSoftReset,
+	u32 extendedCache
 ) {
 	nocashMessage("hookNdsRetailArm7");
 
@@ -344,9 +345,12 @@ int hookNdsRetailArm7(
 	ce7->consoleModel            = consoleModel;
 	ce7->romread_LED             = romread_LED;
 	ce7->gameSoftReset           = gameSoftReset;
+	ce7->extendedCache           = extendedCache;
 
-	u32* ce7_cheat_data = getCheatData(ce7);
+	// Currently makes games not run
+	/*u32* ce7_cheat_data = getCheatData(ce7);
 	endCheatData(ce7_cheat_data, &ce7->cheat_data_len);
+	ce7->cheat_data_len += 2;*/
 
 	*vblankHandler = ce7->patches->vblankHandler;
 	if (!ROMinRAM) {

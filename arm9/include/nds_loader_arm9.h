@@ -44,6 +44,7 @@ int runNds(
 	u32 romread_LED,
 	bool gameSoftReset,
 	bool asyncPrefetch,
+	bool extendedCache,
 	bool logging,
 	bool initDisc,
 	bool dldiPatchNds,
@@ -64,6 +65,7 @@ int runNdsFile(
 	u32 romread_LED,
 	bool gameSoftReset,
 	bool asyncPrefetch,
+	bool extendedCache,
 	bool logging,
 	int argc, const char** argv,
 	u32* cheat_data, u32 cheat_data_len
